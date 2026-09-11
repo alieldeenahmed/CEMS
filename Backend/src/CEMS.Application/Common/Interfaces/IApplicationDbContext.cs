@@ -22,6 +22,7 @@ public interface IApplicationDbContext
     DbSet<Subject> Subjects { get; }
     DbSet<Course> Courses { get; }
     DbSet<CourseEnrollment> CourseEnrollments { get; }
+    DbSet<CourseSession> CourseSessions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

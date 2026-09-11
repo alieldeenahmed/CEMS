@@ -46,6 +46,17 @@ level — never just hidden in the UI.
   modules (Branches, Users, Students, Teachers, Courses, Scheduling,
   Attendance, Exams, Payments, Payroll, Analytics). The frontend's
   `features/` folders will mirror the same breakdown 1:1.
+- All `DateTime` values in the model represent UTC instants (`CourseSession`
+  start/end). `ApplicationDbContext` applies a global value converter that
+  forces `DateTimeKind.Utc` on every `DateTime` property — Npgsql rejects
+  `Kind=Unspecified` for `timestamptz` columns, and JSON-deserialized
+  timestamps come back as `Unspecified` unless the client includes a `Z`
+  suffix. This converter means the API keeps working even if a client
+  forgets it, rather than throwing a 500.
+- All times in `TeacherAvailability` and session scheduling are compared as
+  literal UTC day-of-week/time-of-day, with no branch-timezone handling.
+  Fine for a single-timezone portfolio deployment; a real multi-region
+  system would need each `Branch` to carry an IANA timezone.
 
 ## Local setup
 
@@ -120,12 +131,19 @@ via `POST /api/users/staff`.
       Owner/BranchManager manage it), CourseEnrollment (soft-drop, enforces
       student and course share a branch; Parent can view their child's
       enrollments)
+- [x] Scheduling & Room Booking: `CourseSession` with conflict-checking
+      against room double-booking, teacher double-booking, and teacher
+      declared availability; Owner/BranchManager can override a detected
+      conflict with a required reason (audit-logged), FrontDesk cannot;
+      structural checks (room/course branch match, teacher assigned to
+      branch) are never overridable. Cancelling a session can link to a
+      makeup session. Enrollment waitlisting (`CourseEnrollment.Position`)
+      derives capacity from the room of the course's earliest session;
+      promotion is manual (no auto-promotion)
 - [ ] Frontend scaffold
-- [ ] Remaining modules: Scheduling & Room Booking, Attendance, Exams &
-      Grades, Payments & Fees, Payroll, Analytics Dashboard
+- [ ] Remaining modules: Attendance, Exams & Grades, Payments & Fees,
+      Payroll, Analytics Dashboard
 - [ ] Student branch transfer with history (`StudentBranchHistory`) —
       deliberately deferred until it's the thing being built, not bare CRUD
-- [ ] `TeacherSubject` (which subjects a teacher teaches) — now unblocked
-      (Subject exists), but still deferred to keep this step focused
-- [ ] Scheduled sessions (`CourseSession`) and waitlisting — that's the next
-      module's job (needs room/teacher conflict-checking, not built yet)
+- [ ] `TeacherSubject` (which subjects a teacher teaches) — still deferred;
+      no module has needed it yet

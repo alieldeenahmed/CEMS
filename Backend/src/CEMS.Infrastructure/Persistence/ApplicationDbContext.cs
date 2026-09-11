@@ -8,6 +8,7 @@ using CEMS.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace CEMS.Infrastructure.Persistence;
 
@@ -30,12 +31,32 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
+    public DbSet<CourseSession> CourseSessions => Set<CourseSession>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        // Npgsql requires DateTime.Kind == Utc for "timestamp with time zone" columns, but values
+        // arriving from JSON deserialization (or anywhere else) may have Kind == Unspecified. All
+        // DateTime values in this model represent UTC instants, so force that Kind consistently
+        // rather than relying on every caller to get it right.
+        var utcConverter = new ValueConverter<DateTime, DateTime>(
+            v => v.Kind == DateTimeKind.Utc ? v : DateTime.SpecifyKind(v, DateTimeKind.Utc),
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+        foreach (var entityType in builder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTime))
+                {
+                    property.SetValueConverter(utcConverter);
+                }
+            }
+        }
 
         builder.Entity<IdentityRole<Guid>>().HasData(
             new IdentityRole<Guid>

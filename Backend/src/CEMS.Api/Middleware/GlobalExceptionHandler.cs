@@ -45,6 +45,12 @@ public class GlobalExceptionHandler : IExceptionHandler
                 problem.Title = notFoundException.Message;
                 break;
 
+            case SchedulingConflictException schedulingConflictException:
+                problem.Status = StatusCodes.Status409Conflict;
+                problem.Title = "A scheduling conflict was detected";
+                problem.Extensions["conflicts"] = schedulingConflictException.Conflicts;
+                break;
+
             default:
                 problem.Status = StatusCodes.Status500InternalServerError;
                 problem.Title = "An unexpected error occurred";

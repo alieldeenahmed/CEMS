@@ -6,6 +6,8 @@ using CEMS.Application.Teachers.Commands.DeleteTeacher;
 using CEMS.Application.Teachers.Commands.RemoveAvailability;
 using CEMS.Application.Teachers.Commands.RemoveTeacherFromBranch;
 using CEMS.Application.Teachers.Commands.UpdateTeacher;
+using CEMS.Application.Scheduling;
+using CEMS.Application.Scheduling.Queries.GetMySchedule;
 using CEMS.Application.Teachers.Queries.GetAvailabilityForTeacher;
 using CEMS.Application.Teachers.Queries.GetMyTeacherProfile;
 using CEMS.Application.Teachers.Queries.GetTeacherById;
@@ -46,6 +48,14 @@ public class TeachersController : ControllerBase
     public async Task<ActionResult<TeacherDto>> GetMyProfile(CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetMyTeacherProfileQuery(), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("my-schedule")]
+    [Authorize(Roles = RoleNames.Teacher)]
+    public async Task<ActionResult<List<CourseSessionDto>>> GetMySchedule(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetMyScheduleQuery(), cancellationToken);
         return Ok(result);
     }
 

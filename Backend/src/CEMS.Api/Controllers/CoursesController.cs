@@ -6,6 +6,7 @@ using CEMS.Application.Courses.Commands.EnrollStudent;
 using CEMS.Application.Courses.Commands.UpdateCourse;
 using CEMS.Application.Courses.Queries.GetCourseById;
 using CEMS.Application.Courses.Queries.GetCourses;
+using CEMS.Application.Courses.Commands.PromoteFromWaitlist;
 using CEMS.Application.Courses.Queries.GetEnrollmentsForCourse;
 using CEMS.Domain.Courses;
 using CEMS.Domain.Users;
@@ -92,6 +93,14 @@ public class CoursesController : ControllerBase
     {
         await _mediator.Send(new DropEnrollmentCommand(enrollmentId), cancellationToken);
         return NoContent();
+    }
+
+    [HttpPost("enrollments/{enrollmentId:guid}/promote")]
+    [Authorize(Roles = ViewRoles)]
+    public async Task<ActionResult<CourseEnrollmentDto>> PromoteFromWaitlist(Guid enrollmentId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new PromoteFromWaitlistCommand(enrollmentId), cancellationToken);
+        return Ok(result);
     }
 }
 

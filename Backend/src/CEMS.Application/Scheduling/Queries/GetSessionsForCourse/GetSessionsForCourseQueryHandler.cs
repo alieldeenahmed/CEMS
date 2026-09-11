@@ -4,20 +4,20 @@ using CEMS.Domain.Courses;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace CEMS.Application.Courses.Queries.GetEnrollmentsForCourse;
+namespace CEMS.Application.Scheduling.Queries.GetSessionsForCourse;
 
-public class GetEnrollmentsForCourseQueryHandler : IRequestHandler<GetEnrollmentsForCourseQuery, List<CourseEnrollmentDto>>
+public class GetSessionsForCourseQueryHandler : IRequestHandler<GetSessionsForCourseQuery, List<CourseSessionDto>>
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
 
-    public GetEnrollmentsForCourseQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser)
+    public GetSessionsForCourseQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
     }
 
-    public async Task<List<CourseEnrollmentDto>> Handle(GetEnrollmentsForCourseQuery request, CancellationToken cancellationToken)
+    public async Task<List<CourseSessionDto>> Handle(GetSessionsForCourseQuery request, CancellationToken cancellationToken)
     {
         var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == request.CourseId, cancellationToken)
             ?? throw new NotFoundException(nameof(Course), request.CourseId);
@@ -27,10 +27,12 @@ public class GetEnrollmentsForCourseQueryHandler : IRequestHandler<GetEnrollment
             throw new ForbiddenAccessException("You do not have access to this course.");
         }
 
-        return await _context.CourseEnrollments
-            .Where(e => e.CourseId == request.CourseId)
-            .OrderBy(e => e.EnrollmentDate)
-            .Select(e => new CourseEnrollmentDto(e.Id, e.StudentId, e.CourseId, e.EnrollmentDate, e.Status, e.Position))
+        return await _context.CourseSessions
+            .Where(s => s.CourseId == request.CourseId)
+            .OrderBy(s => s.StartUtc)
+            .Select(s => new CourseSessionDto(
+                s.Id, s.CourseId, s.RoomId, s.TeacherId, s.StartUtc, s.EndUtc,
+                s.Status, s.Overridden, s.OverrideReason, s.RescheduledToSessionId))
             .ToListAsync(cancellationToken);
     }
 }

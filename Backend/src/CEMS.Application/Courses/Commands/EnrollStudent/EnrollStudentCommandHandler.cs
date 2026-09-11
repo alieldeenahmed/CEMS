@@ -37,13 +37,28 @@ public class EnrollStudentCommandHandler : IRequestHandler<EnrollStudentCommand,
         }
 
         var alreadyEnrolled = await _context.CourseEnrollments.AnyAsync(
-            e => e.StudentId == request.StudentId && e.CourseId == request.CourseId && e.Status == CourseEnrollmentStatus.Active,
+            e => e.StudentId == request.StudentId && e.CourseId == request.CourseId
+                && (e.Status == CourseEnrollmentStatus.Active || e.Status == CourseEnrollmentStatus.Waitlisted),
             cancellationToken);
 
         if (alreadyEnrolled)
         {
-            throw new BadRequestException(new[] { "This student is already actively enrolled in this course." });
+            throw new BadRequestException(new[] { "This student is already enrolled or waitlisted for this course." });
         }
+
+        // Capacity is derived from the room of the course's earliest scheduled session. A course
+        // with no sessions yet has no known capacity, so enrollment is unconstrained until one exists.
+        var capacity = await _context.CourseSessions
+            .Where(s => s.CourseId == request.CourseId && s.Status != SessionStatus.Cancelled)
+            .OrderBy(s => s.StartUtc)
+            .Select(s => (int?)s.Room.Capacity)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var activeCount = await _context.CourseEnrollments.CountAsync(
+            e => e.CourseId == request.CourseId && e.Status == CourseEnrollmentStatus.Active,
+            cancellationToken);
+
+        var isFull = capacity.HasValue && activeCount >= capacity.Value;
 
         var enrollment = new CourseEnrollment
         {
@@ -51,12 +66,23 @@ public class EnrollStudentCommandHandler : IRequestHandler<EnrollStudentCommand,
             StudentId = request.StudentId,
             CourseId = request.CourseId,
             EnrollmentDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            Status = CourseEnrollmentStatus.Active
+            Status = isFull ? CourseEnrollmentStatus.Waitlisted : CourseEnrollmentStatus.Active
         };
+
+        if (isFull)
+        {
+            var nextPosition = await _context.CourseEnrollments
+                .Where(e => e.CourseId == request.CourseId && e.Status == CourseEnrollmentStatus.Waitlisted)
+                .Select(e => e.Position)
+                .DefaultIfEmpty()
+                .MaxAsync(cancellationToken) ?? 0;
+
+            enrollment.Position = nextPosition + 1;
+        }
 
         _context.CourseEnrollments.Add(enrollment);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new CourseEnrollmentDto(enrollment.Id, enrollment.StudentId, enrollment.CourseId, enrollment.EnrollmentDate, enrollment.Status);
+        return new CourseEnrollmentDto(enrollment.Id, enrollment.StudentId, enrollment.CourseId, enrollment.EnrollmentDate, enrollment.Status, enrollment.Position);
     }
 }

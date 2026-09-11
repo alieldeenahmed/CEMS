@@ -36,7 +36,7 @@ public class GetEnrollmentsForStudentQueryHandler : IRequestHandler<GetEnrollmen
         return await _context.CourseEnrollments
             .Where(e => e.StudentId == request.StudentId)
             .OrderBy(e => e.EnrollmentDate)
-            .Select(e => new CourseEnrollmentDto(e.Id, e.StudentId, e.CourseId, e.EnrollmentDate, e.Status))
+            .Select(e => new CourseEnrollmentDto(e.Id, e.StudentId, e.CourseId, e.EnrollmentDate, e.Status, e.Position))
             .ToListAsync(cancellationToken);
     }
 }
