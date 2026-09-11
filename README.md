@@ -69,6 +69,18 @@ Restart your terminal/IDE afterward, then apply migrations from `Backend/`:
 dotnet ef database update --project src/CEMS.Infrastructure --startup-project src/CEMS.Api
 ```
 
+**If `dotnet ef` fails with an assembly-load / "Application Control policy"
+error**: this is Windows Smart App Control blocking `dotnet-ef`'s reflection
+load of a freshly-built local DLL, not a code problem. `CEMS.Infrastructure`
+has an `ApplicationDbContextFactory` (`IDesignTimeDbContextFactory`) so `dotnet
+ef migrations add` can be run with just `--project src/CEMS.Infrastructure`
+(no `--startup-project`), which avoids loading `CEMS.Api.dll` — but if Smart
+App Control still blocks it, run the app once instead: temporarily add
+`app.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();`
+after `var app = builder.Build();` in `Program.cs`, `dotnet run` once, then
+remove it. Normal process execution isn't affected by this, only `dotnet-ef`'s
+reflection-based assembly loading is.
+
 There's currently no seeded Owner account and no self-registration path to
 one (self-registration always creates a `Parent`, and creating an `Owner`
 isn't exposed through any endpoint by design). To bootstrap the very first
@@ -100,9 +112,14 @@ via `POST /api/users/staff`.
 - [x] Student Management: Student/Guardian CRUD, student-guardian linking,
       branch-scoped and Parent-scoped RBAC (self-registration auto-creates a
       Guardian record; branch transfer with history is deferred — see below)
+- [x] Teacher Management: Teacher profile CRUD (Owner-only, pay rate is
+      sensitive), floating branch assignment, self-managed availability
+      windows (teacher/BranchManager/Owner, all branch-scoped)
 - [ ] Frontend scaffold
-- [ ] Remaining modules: Teachers, Courses & Curriculum, Scheduling & Room
-      Booking, Attendance, Exams & Grades, Payments & Fees, Payroll,
-      Analytics Dashboard
+- [ ] Remaining modules: Courses & Curriculum, Scheduling & Room Booking,
+      Attendance, Exams & Grades, Payments & Fees, Payroll, Analytics
+      Dashboard
 - [ ] Student branch transfer with history (`StudentBranchHistory`) —
       deliberately deferred until it's the thing being built, not bare CRUD
+- [ ] `TeacherSubject` (which subjects a teacher teaches) — deferred until
+      Courses & Curriculum exists (needs a real `Subject` entity, not a stub)

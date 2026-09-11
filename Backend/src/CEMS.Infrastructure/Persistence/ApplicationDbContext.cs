@@ -1,6 +1,7 @@
 using CEMS.Application.Common.Interfaces;
 using CEMS.Domain.Branches;
 using CEMS.Domain.Students;
+using CEMS.Domain.Teachers;
 using CEMS.Domain.Users;
 using CEMS.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -21,6 +22,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Student> Students => Set<Student>();
     public DbSet<Guardian> Guardians => Set<Guardian>();
     public DbSet<StudentGuardian> StudentGuardians => Set<StudentGuardian>();
+    public DbSet<Teacher> Teachers => Set<Teacher>();
+    public DbSet<TeacherBranch> TeacherBranches => Set<TeacherBranch>();
+    public DbSet<TeacherAvailability> TeacherAvailabilities => Set<TeacherAvailability>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
