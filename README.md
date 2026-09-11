@@ -69,6 +69,21 @@ Restart your terminal/IDE afterward, then apply migrations from `Backend/`:
 dotnet ef database update --project src/CEMS.Infrastructure --startup-project src/CEMS.Api
 ```
 
+There's currently no seeded Owner account and no self-registration path to
+one (self-registration always creates a `Parent`, and creating an `Owner`
+isn't exposed through any endpoint by design). To bootstrap the very first
+Owner locally: register a normal account through `/api/auth/register`, then
+manually insert its role in the database —
+
+```sql
+INSERT INTO "AspNetUserRoles" ("UserId", "RoleId")
+SELECT "Id", '11111111-1111-1111-1111-111111111111' FROM "AspNetUsers" WHERE "Email" = 'you@example.com';
+```
+
+— then log in again to get a token carrying the `Owner` role. Every other
+account (BranchManager/Teacher/FrontDesk) can be created normally afterward
+via `POST /api/users/staff`.
+
 ## Progress
 
 - [x] Backend solution scaffold (4 Clean Architecture projects)
@@ -80,9 +95,8 @@ dotnet ef database update --project src/CEMS.Infrastructure --startup-project sr
 - [x] Role seeding (Owner, BranchManager, Teacher, FrontDesk, Parent)
 - [x] Auth endpoints (register/login, JWT issuing)
 - [x] Branch/Room CRUD endpoints, branch-scoped RBAC
-- [ ] Admin endpoint for creating staff accounts (Owner/BranchManager assign
-      Teacher/FrontDesk/BranchManager roles — self-registration only ever
-      creates Parents)
+- [x] Admin endpoint for creating staff accounts (Owner creates any staff
+      role; BranchManager creates Teacher/FrontDesk for their own branch only)
 - [ ] Frontend scaffold
 - [ ] Remaining modules: Students, Teachers, Courses & Curriculum, Scheduling &
       Room Booking, Attendance, Exams & Grades, Payments & Fees, Payroll,
