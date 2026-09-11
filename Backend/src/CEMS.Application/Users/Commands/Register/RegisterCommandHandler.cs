@@ -1,5 +1,6 @@
 using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
+using CEMS.Domain.Students;
 using CEMS.Domain.Users;
 using MediatR;
 
@@ -9,11 +10,13 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthResul
 {
     private readonly IIdentityService _identityService;
     private readonly IJwtTokenGenerator _tokenGenerator;
+    private readonly IApplicationDbContext _context;
 
-    public RegisterCommandHandler(IIdentityService identityService, IJwtTokenGenerator tokenGenerator)
+    public RegisterCommandHandler(IIdentityService identityService, IJwtTokenGenerator tokenGenerator, IApplicationDbContext context)
     {
         _identityService = identityService;
         _tokenGenerator = tokenGenerator;
+        _context = context;
     }
 
     public async Task<AuthResultDto> Handle(RegisterCommand request, CancellationToken cancellationToken)
@@ -25,6 +28,16 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthResul
         {
             throw new BadRequestException(result.Errors);
         }
+
+        _context.Guardians.Add(new Guardian
+        {
+            Id = Guid.NewGuid(),
+            FullName = request.FullName,
+            Phone = request.PhoneNumber,
+            Email = request.Email,
+            UserId = result.UserId
+        });
+        await _context.SaveChangesAsync(cancellationToken);
 
         var authenticatedUser = await _identityService.GetAuthenticatedUserAsync(result.UserId);
         var (token, expiresAtUtc) = _tokenGenerator.GenerateToken(authenticatedUser);

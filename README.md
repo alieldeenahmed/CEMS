@@ -97,7 +97,12 @@ via `POST /api/users/staff`.
 - [x] Branch/Room CRUD endpoints, branch-scoped RBAC
 - [x] Admin endpoint for creating staff accounts (Owner creates any staff
       role; BranchManager creates Teacher/FrontDesk for their own branch only)
+- [x] Student Management: Student/Guardian CRUD, student-guardian linking,
+      branch-scoped and Parent-scoped RBAC (self-registration auto-creates a
+      Guardian record; branch transfer with history is deferred — see below)
 - [ ] Frontend scaffold
-- [ ] Remaining modules: Students, Teachers, Courses & Curriculum, Scheduling &
-      Room Booking, Attendance, Exams & Grades, Payments & Fees, Payroll,
+- [ ] Remaining modules: Teachers, Courses & Curriculum, Scheduling & Room
+      Booking, Attendance, Exams & Grades, Payments & Fees, Payroll,
       Analytics Dashboard
+- [ ] Student branch transfer with history (`StudentBranchHistory`) —
+      deliberately deferred until it's the thing being built, not bare CRUD

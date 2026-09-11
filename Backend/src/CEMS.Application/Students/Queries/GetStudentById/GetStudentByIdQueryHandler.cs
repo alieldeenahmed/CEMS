@@ -1,0 +1,38 @@
+using CEMS.Application.Common.Exceptions;
+using CEMS.Application.Common.Interfaces;
+using CEMS.Domain.Students;
+using CEMS.Domain.Users;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+namespace CEMS.Application.Students.Queries.GetStudentById;
+
+public class GetStudentByIdQueryHandler : IRequestHandler<GetStudentByIdQuery, StudentDto>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
+
+    public GetStudentByIdQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser)
+    {
+        _context = context;
+        _currentUser = currentUser;
+    }
+
+    public async Task<StudentDto> Handle(GetStudentByIdQuery request, CancellationToken cancellationToken)
+    {
+        var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken)
+            ?? throw new NotFoundException(nameof(Student), request.Id);
+
+        var hasAccess = _currentUser.IsInRole(RoleNames.Owner)
+            || (_currentUser.IsInRole(RoleNames.Parent) && await _context.StudentGuardians
+                .AnyAsync(sg => sg.StudentId == student.Id && sg.Guardian.UserId == _currentUser.UserId, cancellationToken))
+            || _currentUser.HasAccessToBranch(student.CurrentBranchId);
+
+        if (!hasAccess)
+        {
+            throw new ForbiddenAccessException("You do not have access to this student.");
+        }
+
+        return StudentDto.FromEntity(student);
+    }
+}

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using CEMS.Api.Middleware;
 using CEMS.Api.Services;
 using CEMS.Application;
@@ -19,6 +20,10 @@ builder.Services.AddControllers(options =>
 {
     var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
     options.Filters.Add(new AuthorizeFilter(policy));
+})
+.AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
 builder.Services.AddApplicationServices();
@@ -37,6 +42,7 @@ builder.Services
     })
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
