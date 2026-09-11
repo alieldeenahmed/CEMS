@@ -2,6 +2,9 @@ using CEMS.Application.Attendance;
 using CEMS.Application.Attendance.Queries.GetAttendanceForStudent;
 using CEMS.Application.Courses;
 using CEMS.Application.Courses.Queries.GetEnrollmentsForStudent;
+using CEMS.Application.Exams;
+using CEMS.Application.Exams.Queries.GenerateReportCard;
+using CEMS.Application.Exams.Queries.GetGradesForStudent;
 using CEMS.Application.Students;
 using CEMS.Application.Students.Commands.CreateStudent;
 using CEMS.Application.Students.Commands.DeleteStudent;
@@ -122,6 +125,22 @@ public class StudentsController : ControllerBase
     {
         var result = await _mediator.Send(new GetAttendanceForStudentQuery(id), cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/grades")]
+    [Authorize(Roles = ViewRoles)]
+    public async Task<ActionResult<List<GradeDto>>> GetGradesForStudent(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetGradesForStudentQuery(id), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/report-card")]
+    [Authorize(Roles = ViewRoles)]
+    public async Task<IActionResult> GetReportCard(Guid id, CancellationToken cancellationToken)
+    {
+        var pdfBytes = await _mediator.Send(new GenerateReportCardQuery(id), cancellationToken);
+        return File(pdfBytes, "application/pdf", $"report-card-{id}.pdf");
     }
 }
 

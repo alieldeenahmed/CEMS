@@ -1,6 +1,7 @@
 using CEMS.Domain.Attendance;
 using CEMS.Domain.Branches;
 using CEMS.Domain.Courses;
+using CEMS.Domain.Exams;
 using CEMS.Domain.Students;
 using CEMS.Domain.Teachers;
 using CEMS.Domain.Users;
@@ -25,6 +26,8 @@ public interface IApplicationDbContext
     DbSet<CourseEnrollment> CourseEnrollments { get; }
     DbSet<CourseSession> CourseSessions { get; }
     DbSet<SessionAttendance> SessionAttendances { get; }
+    DbSet<Exam> Exams { get; }
+    DbSet<Grade> Grades { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

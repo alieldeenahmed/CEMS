@@ -15,6 +15,7 @@ over HTTP.
 - ASP.NET Identity + JWT authentication
 - Clean Architecture: `Domain` → `Application` → `Infrastructure` → `Api`
 - MediatR (CQRS), FluentValidation, AutoMapper
+- QuestPDF (report card PDF generation)
 
 **Frontend** (`Frontend/`) — not started yet
 - React + Vite + TypeScript
@@ -146,9 +147,18 @@ via `POST /api/users/staff`.
       defaulting to `Unmarked` (no background job for no-show flagging, per
       the earlier decision — staff review is manual). History view is
       Parent-scoped like enrollments/guardians.
+- [x] Exams & Grades: `Exam` (per course) and `Grade` (upsert, like
+      Attendance) managed by Owner/BranchManager (branch-scoped) or Teacher
+      — but only for courses they actually teach, checked live against
+      `CourseSession.TeacherId`, not just branch membership. FrontDesk views
+      only. Exam roster mirrors the Attendance pattern (every enrolled
+      student, `null` score if ungraded); student grade history is
+      staff-admin/Parent-scoped, deliberately excluding Teacher (a teacher
+      shouldn't see a student's grades from courses they don't teach).
+      Report cards render as real PDFs via QuestPDF (`IReportCardGenerator`
+      abstraction, same pattern as `IIdentityService`), grouped by course.
 - [ ] Frontend scaffold
-- [ ] Remaining modules: Exams & Grades, Payments & Fees, Payroll,
-      Analytics Dashboard
+- [ ] Remaining modules: Payments & Fees, Payroll, Analytics Dashboard
 - [ ] Student branch transfer with history (`StudentBranchHistory`) —
       deliberately deferred until it's the thing being built, not bare CRUD
 - [ ] `TeacherSubject` (which subjects a teacher teaches) — still deferred;
