@@ -140,9 +140,15 @@ via `POST /api/users/staff`.
       makeup session. Enrollment waitlisting (`CourseEnrollment.Position`)
       derives capacity from the room of the course's earliest session;
       promotion is manual (no auto-promotion)
+- [x] Attendance: `SessionAttendance` marked by the assigned teacher (self)
+      or Owner/BranchManager (branch-scoped admin correction) — never
+      FrontDesk. Roster view shows every actively-enrolled student
+      defaulting to `Unmarked` (no background job for no-show flagging, per
+      the earlier decision — staff review is manual). History view is
+      Parent-scoped like enrollments/guardians.
 - [ ] Frontend scaffold
-- [ ] Remaining modules: Attendance, Exams & Grades, Payments & Fees,
-      Payroll, Analytics Dashboard
+- [ ] Remaining modules: Exams & Grades, Payments & Fees, Payroll,
+      Analytics Dashboard
 - [ ] Student branch transfer with history (`StudentBranchHistory`) —
       deliberately deferred until it's the thing being built, not bare CRUD
 - [ ] `TeacherSubject` (which subjects a teacher teaches) — still deferred;

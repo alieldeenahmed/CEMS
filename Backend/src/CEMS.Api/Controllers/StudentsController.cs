@@ -1,3 +1,5 @@
+using CEMS.Application.Attendance;
+using CEMS.Application.Attendance.Queries.GetAttendanceForStudent;
 using CEMS.Application.Courses;
 using CEMS.Application.Courses.Queries.GetEnrollmentsForStudent;
 using CEMS.Application.Students;
@@ -111,6 +113,14 @@ public class StudentsController : ControllerBase
     public async Task<ActionResult<List<CourseEnrollmentDto>>> GetEnrollmentsForStudent(Guid id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetEnrollmentsForStudentQuery(id), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/attendance")]
+    [Authorize(Roles = ViewRoles)]
+    public async Task<ActionResult<List<AttendanceRecordDto>>> GetAttendanceForStudent(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetAttendanceForStudentQuery(id), cancellationToken);
         return Ok(result);
     }
 }
