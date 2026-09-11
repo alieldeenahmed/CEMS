@@ -56,6 +56,13 @@ string is never committed — set it as a user environment variable instead:
 [System.Environment]::SetEnvironmentVariable("ConnectionStrings__Default", "Host=localhost;Port=5432;Database=cems;Username=postgres;Password=YOUR_PASSWORD", "User")
 ```
 
+The JWT signing key is set the same way — it's a secret, so it's never
+committed either. Any random string works locally:
+
+```powershell
+[System.Environment]::SetEnvironmentVariable("Jwt__Key", "<a long random string>", "User")
+```
+
 Restart your terminal/IDE afterward, then apply migrations from `Backend/`:
 
 ```bash
@@ -71,7 +78,7 @@ dotnet ef database update --project src/CEMS.Infrastructure --startup-project sr
 - [x] `ApplicationDbContext`
 - [x] DI wiring (Program.cs, connection string) + first migration
 - [x] Role seeding (Owner, BranchManager, Teacher, FrontDesk, Parent)
-- [ ] Auth endpoints (register/login, JWT issuing)
+- [x] Auth endpoints (register/login, JWT issuing)
 - [ ] Branch/Room CRUD endpoints
 - [ ] Frontend scaffold
 - [ ] Remaining modules: Students, Teachers, Courses & Curriculum, Scheduling &
