@@ -47,6 +47,21 @@ level — never just hidden in the UI.
   Attendance, Exams, Payments, Payroll, Analytics). The frontend's
   `features/` folders will mirror the same breakdown 1:1.
 
+## Local setup
+
+Requires a local PostgreSQL instance and a `cems` database. The connection
+string is never committed — set it as a user environment variable instead:
+
+```powershell
+[System.Environment]::SetEnvironmentVariable("ConnectionStrings__Default", "Host=localhost;Port=5432;Database=cems;Username=postgres;Password=YOUR_PASSWORD", "User")
+```
+
+Restart your terminal/IDE afterward, then apply migrations from `Backend/`:
+
+```bash
+dotnet ef database update --project src/CEMS.Infrastructure --startup-project src/CEMS.Api
+```
+
 ## Progress
 
 - [x] Backend solution scaffold (4 Clean Architecture projects)
@@ -54,8 +69,9 @@ level — never just hidden in the UI.
 - [x] `Branch` / `Room` domain entities
 - [x] `ApplicationUser` (Identity) + `UserBranchAssignment`
 - [x] `ApplicationDbContext`
-- [ ] DI wiring (Program.cs, connection string) + first migration
-- [ ] Auth endpoints (register/login, JWT issuing) + role seeding
+- [x] DI wiring (Program.cs, connection string) + first migration
+- [x] Role seeding (Owner, BranchManager, Teacher, FrontDesk, Parent)
+- [ ] Auth endpoints (register/login, JWT issuing)
 - [ ] Branch/Room CRUD endpoints
 - [ ] Frontend scaffold
 - [ ] Remaining modules: Students, Teachers, Courses & Curriculum, Scheduling &
