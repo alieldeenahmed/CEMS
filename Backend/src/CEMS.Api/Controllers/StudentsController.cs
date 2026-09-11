@@ -1,3 +1,5 @@
+using CEMS.Application.Courses;
+using CEMS.Application.Courses.Queries.GetEnrollmentsForStudent;
 using CEMS.Application.Students;
 using CEMS.Application.Students.Commands.CreateStudent;
 using CEMS.Application.Students.Commands.DeleteStudent;
@@ -102,6 +104,14 @@ public class StudentsController : ControllerBase
     {
         await _mediator.Send(new UnlinkGuardianCommand(id, guardianId), cancellationToken);
         return NoContent();
+    }
+
+    [HttpGet("{id:guid}/enrollments")]
+    [Authorize(Roles = ViewRoles)]
+    public async Task<ActionResult<List<CourseEnrollmentDto>>> GetEnrollmentsForStudent(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetEnrollmentsForStudentQuery(id), cancellationToken);
+        return Ok(result);
     }
 }
 

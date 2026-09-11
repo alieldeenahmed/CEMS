@@ -1,4 +1,5 @@
 using CEMS.Domain.Branches;
+using CEMS.Domain.Courses;
 using CEMS.Domain.Students;
 using CEMS.Domain.Teachers;
 using CEMS.Domain.Users;
@@ -17,6 +18,10 @@ public interface IApplicationDbContext
     DbSet<Teacher> Teachers { get; }
     DbSet<TeacherBranch> TeacherBranches { get; }
     DbSet<TeacherAvailability> TeacherAvailabilities { get; }
+    DbSet<Curriculum> Curricula { get; }
+    DbSet<Subject> Subjects { get; }
+    DbSet<Course> Courses { get; }
+    DbSet<CourseEnrollment> CourseEnrollments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

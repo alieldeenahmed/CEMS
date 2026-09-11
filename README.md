@@ -115,11 +115,17 @@ via `POST /api/users/staff`.
 - [x] Teacher Management: Teacher profile CRUD (Owner-only, pay rate is
       sensitive), floating branch assignment, self-managed availability
       windows (teacher/BranchManager/Owner, all branch-scoped)
+- [x] Course & Curriculum Management: Curriculum/Subject (org-wide catalog,
+      viewable by anyone, Owner-only to edit), Course (branch-scoped,
+      Owner/BranchManager manage it), CourseEnrollment (soft-drop, enforces
+      student and course share a branch; Parent can view their child's
+      enrollments)
 - [ ] Frontend scaffold
-- [ ] Remaining modules: Courses & Curriculum, Scheduling & Room Booking,
-      Attendance, Exams & Grades, Payments & Fees, Payroll, Analytics
-      Dashboard
+- [ ] Remaining modules: Scheduling & Room Booking, Attendance, Exams &
+      Grades, Payments & Fees, Payroll, Analytics Dashboard
 - [ ] Student branch transfer with history (`StudentBranchHistory`) —
       deliberately deferred until it's the thing being built, not bare CRUD
-- [ ] `TeacherSubject` (which subjects a teacher teaches) — deferred until
-      Courses & Curriculum exists (needs a real `Subject` entity, not a stub)
+- [ ] `TeacherSubject` (which subjects a teacher teaches) — now unblocked
+      (Subject exists), but still deferred to keep this step focused
+- [ ] Scheduled sessions (`CourseSession`) and waitlisting — that's the next
+      module's job (needs room/teacher conflict-checking, not built yet)

@@ -1,5 +1,6 @@
 using CEMS.Application.Common.Interfaces;
 using CEMS.Domain.Branches;
+using CEMS.Domain.Courses;
 using CEMS.Domain.Students;
 using CEMS.Domain.Teachers;
 using CEMS.Domain.Users;
@@ -25,6 +26,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Teacher> Teachers => Set<Teacher>();
     public DbSet<TeacherBranch> TeacherBranches => Set<TeacherBranch>();
     public DbSet<TeacherAvailability> TeacherAvailabilities => Set<TeacherAvailability>();
+    public DbSet<Curriculum> Curricula => Set<Curriculum>();
+    public DbSet<Subject> Subjects => Set<Subject>();
+    public DbSet<Course> Courses => Set<Course>();
+    public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
