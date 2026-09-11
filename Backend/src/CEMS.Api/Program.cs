@@ -1,6 +1,8 @@
 using System.Text;
 using CEMS.Api.Middleware;
+using CEMS.Api.Services;
 using CEMS.Application;
+using CEMS.Application.Common.Interfaces;
 using CEMS.Infrastructure;
 using CEMS.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -21,6 +23,9 @@ builder.Services.AddControllers(options =>
 
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
 

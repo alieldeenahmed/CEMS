@@ -1,3 +1,4 @@
+using CEMS.Application.Common.Interfaces;
 using CEMS.Domain.Branches;
 using CEMS.Domain.Users;
 using CEMS.Infrastructure.Identity;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CEMS.Infrastructure.Persistence;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IApplicationDbContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {

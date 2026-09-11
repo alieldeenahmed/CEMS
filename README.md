@@ -79,7 +79,10 @@ dotnet ef database update --project src/CEMS.Infrastructure --startup-project sr
 - [x] DI wiring (Program.cs, connection string) + first migration
 - [x] Role seeding (Owner, BranchManager, Teacher, FrontDesk, Parent)
 - [x] Auth endpoints (register/login, JWT issuing)
-- [ ] Branch/Room CRUD endpoints
+- [x] Branch/Room CRUD endpoints, branch-scoped RBAC
+- [ ] Admin endpoint for creating staff accounts (Owner/BranchManager assign
+      Teacher/FrontDesk/BranchManager roles — self-registration only ever
+      creates Parents)
 - [ ] Frontend scaffold
 - [ ] Remaining modules: Students, Teachers, Courses & Curriculum, Scheduling &
       Room Booking, Attendance, Exams & Grades, Payments & Fees, Payroll,

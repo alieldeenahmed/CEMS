@@ -35,6 +35,16 @@ public class GlobalExceptionHandler : IExceptionHandler
                 problem.Title = authenticationException.Message;
                 break;
 
+            case ForbiddenAccessException forbiddenAccessException:
+                problem.Status = StatusCodes.Status403Forbidden;
+                problem.Title = forbiddenAccessException.Message;
+                break;
+
+            case NotFoundException notFoundException:
+                problem.Status = StatusCodes.Status404NotFound;
+                problem.Title = notFoundException.Message;
+                break;
+
             default:
                 problem.Status = StatusCodes.Status500InternalServerError;
                 problem.Title = "An unexpected error occurred";

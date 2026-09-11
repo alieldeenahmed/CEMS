@@ -35,6 +35,7 @@ public static class DependencyInjection
 
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
 
         return services;
     }
