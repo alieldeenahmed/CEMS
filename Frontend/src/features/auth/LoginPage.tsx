@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { isAxiosError } from 'axios'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -31,8 +32,14 @@ export function LoginPage() {
     try {
       await login(values)
       navigate(redirectTo, { replace: true })
-    } catch {
-      setFormError('Incorrect email or password.')
+    } catch (error) {
+      if (isAxiosError(error) && error.response) {
+        setFormError('Incorrect email or password.')
+      } else {
+        setFormError(
+          `Could not reach the server at ${import.meta.env.VITE_API_URL}. Make sure the API is running and its HTTPS certificate is trusted.`,
+        )
+      }
     }
   }
 

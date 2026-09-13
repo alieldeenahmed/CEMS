@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { BranchesPage } from '@/features/branches/BranchesPage'
 import { HomePage } from '@/features/dashboard/HomePage'
 import { ComingSoonPage } from '@/shared/ComingSoonPage'
 import { AppShell } from './layout/AppShell'
@@ -17,7 +18,7 @@ export const router = createBrowserRouter([
         element: <AppShell />,
         children: [
           { path: '/', element: <HomePage /> },
-          { path: '/branches', element: <ComingSoonPage title="Branches" /> },
+          { path: '/branches', element: <BranchesPage /> },
           { path: '/staff', element: <ComingSoonPage title="Staff" /> },
           { path: '/students', element: <ComingSoonPage title="Students" /> },
           { path: '/teachers', element: <ComingSoonPage title="Teachers" /> },

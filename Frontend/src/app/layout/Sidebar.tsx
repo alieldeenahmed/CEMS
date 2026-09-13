@@ -11,7 +11,7 @@ export function Sidebar() {
         <span className="font-serif text-xl font-semibold text-paper">CEMS</span>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 pb-4">
+      <nav className="flex-1 overflow-y-auto px-3 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {NAV_GROUPS.map((group) => {
           const items = group.items.filter((item) =>
             item.roles.some((role) => user?.roles.includes(role)),
