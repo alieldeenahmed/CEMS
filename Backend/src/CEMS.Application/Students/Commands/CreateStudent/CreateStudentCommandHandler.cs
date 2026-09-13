@@ -31,6 +31,31 @@ public class CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand,
             throw new ForbiddenAccessException("You do not have access to this branch.");
         }
 
+        Guid guardianId;
+        if (request.ExistingGuardianId.HasValue)
+        {
+            var guardianExists = await _context.Guardians.AnyAsync(g => g.Id == request.ExistingGuardianId.Value, cancellationToken);
+            if (!guardianExists)
+            {
+                throw new NotFoundException(nameof(Guardian), request.ExistingGuardianId.Value);
+            }
+
+            guardianId = request.ExistingGuardianId.Value;
+        }
+        else
+        {
+            var guardian = new Guardian
+            {
+                Id = Guid.NewGuid(),
+                FullName = request.NewGuardianFullName!,
+                Phone = request.NewGuardianPhone!,
+                Email = request.NewGuardianEmail!
+            };
+
+            _context.Guardians.Add(guardian);
+            guardianId = guardian.Id;
+        }
+
         var student = new Student
         {
             Id = Guid.NewGuid(),
@@ -43,6 +68,17 @@ public class CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand,
         };
 
         _context.Students.Add(student);
+
+        _context.StudentGuardians.Add(new StudentGuardian
+        {
+            StudentId = student.Id,
+            GuardianId = guardianId,
+            RelationshipType = request.RelationshipType,
+            IsPrimaryContact = request.IsPrimaryContact
+        });
+
+        // A single SaveChangesAsync wraps the guardian (if new), student, and link in one
+        // transaction, so a student can never end up persisted without its guardian.
         await _context.SaveChangesAsync(cancellationToken);
 
         return StudentDto.FromEntity(student);

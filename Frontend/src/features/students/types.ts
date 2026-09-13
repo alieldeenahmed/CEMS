@@ -17,6 +17,12 @@ export interface CreateStudentInput {
   dateOfBirth: string
   gender: Gender
   branchId: string
+  existingGuardianId: string | null
+  newGuardianFullName: string | null
+  newGuardianPhone: string | null
+  newGuardianEmail: string | null
+  relationshipType: RelationshipType
+  isPrimaryContact: boolean
 }
 
 export interface UpdateStudentInput {
