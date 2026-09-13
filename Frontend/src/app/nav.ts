@@ -72,7 +72,7 @@ export const NAV_GROUPS: NavGroup[] = [
         label: 'Courses',
         path: '/courses',
         icon: BookOpen,
-        roles: [ROLES.Owner, ROLES.BranchManager],
+        roles: [ROLES.Owner, ROLES.BranchManager, ROLES.FrontDesk],
       },
       {
         label: 'Curricula',

@@ -2,6 +2,8 @@ import { createBrowserRouter } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
 import { HomePage } from '@/features/dashboard/HomePage'
+import { CoursesPage } from '@/features/courses/CoursesPage'
+import { CurriculaPage } from '@/features/curricula/CurriculaPage'
 import { StaffPage } from '@/features/staff/StaffPage'
 import { StudentsPage } from '@/features/students/StudentsPage'
 import { TeachersPage } from '@/features/teachers/TeachersPage'
@@ -26,8 +28,8 @@ export const router = createBrowserRouter([
           { path: '/students', element: <StudentsPage /> },
           { path: '/teachers', element: <TeachersPage /> },
           { path: '/my-children', element: <ComingSoonPage title="My Children" /> },
-          { path: '/courses', element: <ComingSoonPage title="Courses" /> },
-          { path: '/curricula', element: <ComingSoonPage title="Curricula" /> },
+          { path: '/courses', element: <CoursesPage /> },
+          { path: '/curricula', element: <CurriculaPage /> },
           { path: '/scheduling', element: <ComingSoonPage title="Scheduling" /> },
           { path: '/attendance', element: <ComingSoonPage title="Attendance" /> },
           { path: '/exams', element: <ComingSoonPage title="Exams & Grades" /> },
