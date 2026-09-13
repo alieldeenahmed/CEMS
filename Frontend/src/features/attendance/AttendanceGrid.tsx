@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@/shared/api/errors'
 import { useAttendanceForSession, useMarkAttendance } from './api'
 import type { AttendanceStatus } from './types'
 
@@ -36,7 +37,10 @@ export function AttendanceGrid({ sessionId, canMark }: { sessionId: string; canM
             value={record.status}
             disabled={!canMark || markAttendance.isPending}
             onChange={(e) =>
-              markAttendance.mutate({ studentId: record.studentId, status: e.target.value as AttendanceStatus })
+              markAttendance.mutate(
+                { studentId: record.studentId, status: e.target.value as AttendanceStatus },
+                { onError: (error) => window.alert(getErrorMessage(error, 'Could not update attendance.')) },
+              )
             }
             className={`rounded-md border bg-paper px-2.5 py-1 text-sm font-medium outline-none disabled:opacity-60 ${STATUS_CLASSES[record.status]}`}
           >

@@ -10,6 +10,15 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { Select } from '@/shared/ui/Input'
 import { AttendanceGrid } from './AttendanceGrid'
 
+const ATTENDANCE_WINDOW_HOURS_AFTER_END = 4
+
+function isWithinAttendanceWindow(session: { startUtc: string; endUtc: string }) {
+  const now = Date.now()
+  const start = new Date(session.startUtc).getTime()
+  const closesAt = new Date(session.endUtc).getTime() + ATTENDANCE_WINDOW_HOURS_AFTER_END * 60 * 60 * 1000
+  return start <= now && now <= closesAt
+}
+
 function CourseScopedPicker({ onSelect }: { onSelect: (sessionId: string) => void }) {
   const { data: courses } = useCourses()
   const { data: branches } = useBranches()
@@ -17,8 +26,7 @@ function CourseScopedPicker({ onSelect }: { onSelect: (sessionId: string) => voi
   const { data: sessions } = useSessionsForCourse(courseId || null)
 
   const branchNameById = new Map(branches?.map((b) => [b.id, b.name]))
-  const now = new Date().toISOString()
-  const markableSessions = sessions?.filter((s) => s.status !== 'Cancelled' && s.startUtc <= now) ?? []
+  const markableSessions = sessions?.filter((s) => s.status !== 'Cancelled' && isWithinAttendanceWindow(s)) ?? []
 
   return (
     <div className="mb-4 flex items-center gap-3">
@@ -50,8 +58,7 @@ function CourseScopedPicker({ onSelect }: { onSelect: (sessionId: string) => voi
 
 function MySchedulePicker({ onSelect }: { onSelect: (sessionId: string) => void }) {
   const { data: sessions } = useMySchedule()
-  const now = new Date().toISOString()
-  const markableSessions = sessions?.filter((s) => s.status !== 'Cancelled' && s.startUtc <= now) ?? []
+  const markableSessions = sessions?.filter((s) => s.status !== 'Cancelled' && isWithinAttendanceWindow(s)) ?? []
 
   return (
     <div className="mb-4 w-72">

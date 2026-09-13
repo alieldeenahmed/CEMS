@@ -41,6 +41,11 @@ public class MarkAttendanceCommandHandler : IRequestHandler<MarkAttendanceComman
             throw new BadRequestException(new[] { "Cannot mark attendance for a session that hasn't started yet." });
         }
 
+        if (DateTime.UtcNow > session.EndUtc.AddHours(4))
+        {
+            throw new BadRequestException(new[] { "The attendance window for this session has closed. Attendance can only be marked or edited within 4 hours of the session ending." });
+        }
+
         var studentFullName = await _context.CourseEnrollments
             .Where(e => e.StudentId == request.StudentId && e.CourseId == session.CourseId && e.Status == CourseEnrollmentStatus.Active)
             .Select(e => e.Student.FullName)
