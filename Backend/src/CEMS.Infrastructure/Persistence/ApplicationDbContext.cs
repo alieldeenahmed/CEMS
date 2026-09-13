@@ -4,6 +4,7 @@ using CEMS.Domain.Branches;
 using CEMS.Domain.Courses;
 using CEMS.Domain.Exams;
 using CEMS.Domain.Payments;
+using CEMS.Domain.Payroll;
 using CEMS.Domain.Students;
 using CEMS.Domain.Teachers;
 using CEMS.Domain.Users;
@@ -41,6 +42,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Package> Packages => Set<Package>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<PayrollRun> PayrollRuns => Set<PayrollRun>();
+    public DbSet<PayrollLineItem> PayrollLineItems => Set<PayrollLineItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

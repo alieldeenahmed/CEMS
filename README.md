@@ -169,8 +169,19 @@ via `POST /api/users/staff`.
       Dedicated outstanding-balance endpoint sums unpaid amounts across all
       non-cancelled invoices for a student, Parent-visible for their own
       child.
+- [x] Payroll: `PayrollRun` (Draft→Approved→Paid) auto-computed from every
+      non-cancelled `CourseSession` in the period, priced by `PayType`
+      (Hourly × duration, or flat PerSession) — a center-cancelled session
+      isn't paid, but its linked makeup session is a normal session and is
+      paid like any other, per the earlier no-show-vs-cancellation
+      decision. `PayrollLineItem` traces each session's contribution.
+      Entirely Owner-only (generation, approval, payout) since it reveals
+      actual computed compensation, same sensitivity level as `PayRate`
+      itself — except a teacher can view their own runs, self-service like
+      `my-profile`/`my-schedule`. Guards against generating two runs with
+      overlapping periods for the same teacher.
 - [ ] Frontend scaffold
-- [ ] Remaining modules: Payroll, Analytics Dashboard
+- [ ] Remaining module: Analytics Dashboard
 - [ ] Student branch transfer with history (`StudentBranchHistory`) —
       deliberately deferred until it's the thing being built, not bare CRUD
 - [ ] `TeacherSubject` (which subjects a teacher teaches) — still deferred;

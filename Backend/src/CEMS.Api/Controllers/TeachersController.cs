@@ -6,6 +6,10 @@ using CEMS.Application.Teachers.Commands.DeleteTeacher;
 using CEMS.Application.Teachers.Commands.RemoveAvailability;
 using CEMS.Application.Teachers.Commands.RemoveTeacherFromBranch;
 using CEMS.Application.Teachers.Commands.UpdateTeacher;
+using CEMS.Application.Payroll;
+using CEMS.Application.Payroll.Commands.GeneratePayrollRun;
+using CEMS.Application.Payroll.Queries.GetMyPayrollRuns;
+using CEMS.Application.Payroll.Queries.GetPayrollRunsForTeacher;
 using CEMS.Application.Scheduling;
 using CEMS.Application.Scheduling.Queries.GetMySchedule;
 using CEMS.Application.Teachers.Queries.GetAvailabilityForTeacher;
@@ -132,8 +136,34 @@ public class TeachersController : ControllerBase
         await _mediator.Send(new RemoveAvailabilityCommand(id), cancellationToken);
         return NoContent();
     }
+
+    [HttpGet("{id:guid}/payroll-runs")]
+    [Authorize(Roles = RoleNames.Owner)]
+    public async Task<ActionResult<List<PayrollRunDto>>> GetPayrollRunsForTeacher(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPayrollRunsForTeacherQuery(id), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{id:guid}/payroll-runs")]
+    [Authorize(Roles = RoleNames.Owner)]
+    public async Task<ActionResult<PayrollRunDto>> GeneratePayrollRun(Guid id, GeneratePayrollRunRequest request, CancellationToken cancellationToken)
+    {
+        var command = new GeneratePayrollRunCommand(id, request.PeriodStart, request.PeriodEnd);
+        var result = await _mediator.Send(command, cancellationToken);
+        return CreatedAtAction("GetPayrollRunById", "PayrollRuns", new { id = result.Id }, result);
+    }
+
+    [HttpGet("my-payroll-runs")]
+    [Authorize(Roles = RoleNames.Teacher)]
+    public async Task<ActionResult<List<PayrollRunDto>>> GetMyPayrollRuns(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetMyPayrollRunsQuery(), cancellationToken);
+        return Ok(result);
+    }
 }
 
 public record UpdateTeacherRequest(DateOnly HireDate, PayType PayType, decimal PayRate);
 public record AddTeacherToBranchRequest(Guid BranchId);
 public record AddAvailabilityRequest(Guid BranchId, DayOfWeek DayOfWeek, TimeOnly StartTime, TimeOnly EndTime);
+public record GeneratePayrollRunRequest(DateOnly PeriodStart, DateOnly PeriodEnd);

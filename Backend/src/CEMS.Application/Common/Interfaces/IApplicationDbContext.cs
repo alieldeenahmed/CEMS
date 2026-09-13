@@ -3,6 +3,7 @@ using CEMS.Domain.Branches;
 using CEMS.Domain.Courses;
 using CEMS.Domain.Exams;
 using CEMS.Domain.Payments;
+using CEMS.Domain.Payroll;
 using CEMS.Domain.Students;
 using CEMS.Domain.Teachers;
 using CEMS.Domain.Users;
@@ -32,6 +33,8 @@ public interface IApplicationDbContext
     DbSet<Package> Packages { get; }
     DbSet<Invoice> Invoices { get; }
     DbSet<Payment> Payments { get; }
+    DbSet<PayrollRun> PayrollRuns { get; }
+    DbSet<PayrollLineItem> PayrollLineItems { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
