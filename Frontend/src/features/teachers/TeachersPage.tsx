@@ -9,7 +9,14 @@ import { AvailabilitySection } from './AvailabilitySection'
 import { useDeleteTeacher, useTeachers } from './api'
 import { BranchAssignmentsSection } from './BranchAssignmentsSection'
 import { TeacherFormModal } from './TeacherFormModal'
-import type { Teacher } from './types'
+import type { PayType, Teacher } from './types'
+
+const PAY_TYPE_LABELS: Record<PayType, string> = {
+  Hourly: 'Hourly',
+  PerSession: 'Per Session',
+  Fixed: 'Fixed',
+  Percentage: 'Percentage',
+}
 
 export function TeachersPage() {
   const { hasRole } = useAuth()
@@ -82,7 +89,7 @@ export function TeachersPage() {
                   </div>
 
                   <span className="rounded-full bg-ochre/10 px-2.5 py-0.5 text-xs font-medium text-ochre">
-                    {teacher.payType === 'PerSession' ? 'Per Session' : 'Hourly'} · {teacher.payRate}
+                    {PAY_TYPE_LABELS[teacher.payType]} · {teacher.payType === 'Percentage' ? `${teacher.payRate}%` : teacher.payRate}
                   </span>
 
                   {isOwner && (

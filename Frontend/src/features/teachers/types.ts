@@ -1,4 +1,4 @@
-export type PayType = 'Hourly' | 'PerSession'
+export type PayType = 'Hourly' | 'PerSession' | 'Fixed' | 'Percentage'
 
 export const DAYS_OF_WEEK = [
   'Sunday',

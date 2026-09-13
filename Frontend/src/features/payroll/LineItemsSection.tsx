@@ -36,7 +36,7 @@ export function LineItemsSection({ runId }: { runId: string }) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted">No sessions in this run.</p>
+        <p className="text-sm text-muted">No per-session breakdown to show for this run.</p>
       )}
     </div>
   )

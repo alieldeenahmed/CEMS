@@ -8,14 +8,26 @@ import { Modal } from '@/shared/ui/Modal'
 import { useCreateTeacherProfile, useTeacherCandidates, useUpdateTeacher } from './api'
 import type { Teacher } from './types'
 
-const teacherSchema = z.object({
-  userId: z.string().optional(),
-  hireDate: z.string().min(1, 'Hire date is required'),
-  payType: z.enum(['Hourly', 'PerSession']),
-  payRate: z.number().positive('Pay rate must be greater than 0'),
-})
+const teacherSchema = z
+  .object({
+    userId: z.string().optional(),
+    hireDate: z.string().min(1, 'Hire date is required'),
+    payType: z.enum(['Hourly', 'PerSession', 'Fixed', 'Percentage']),
+    payRate: z.number().positive('Pay rate must be greater than 0'),
+  })
+  .refine((values) => values.payType !== 'Percentage' || values.payRate <= 100, {
+    message: 'A percentage pay rate cannot exceed 100',
+    path: ['payRate'],
+  })
 
 type TeacherFormValues = z.infer<typeof teacherSchema>
+
+const PAY_RATE_LABELS: Record<TeacherFormValues['payType'], string> = {
+  Hourly: 'Pay rate (per hour)',
+  PerSession: 'Pay rate (per session)',
+  Fixed: 'Pay rate (flat, per payroll period)',
+  Percentage: 'Pay rate (% of package revenue collected)',
+}
 
 interface TeacherFormModalProps {
   teacher: Teacher | null
@@ -31,6 +43,7 @@ export function TeacherFormModal({ teacher, onClose }: TeacherFormModalProps) {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<TeacherFormValues>({
     resolver: zodResolver(teacherSchema),
@@ -40,6 +53,8 @@ export function TeacherFormModal({ teacher, onClose }: TeacherFormModalProps) {
       payRate: teacher?.payRate ?? 0,
     },
   })
+
+  const payType = watch('payType')
 
   async function onSubmit(values: TeacherFormValues) {
     setServerError(null)
@@ -93,15 +108,28 @@ export function TeacherFormModal({ teacher, onClose }: TeacherFormModalProps) {
         <Select label="Pay type" {...register('payType')}>
           <option value="Hourly">Hourly</option>
           <option value="PerSession">Per Session</option>
+          <option value="Fixed">Fixed</option>
+          <option value="Percentage">Percentage of package revenue</option>
         </Select>
 
         <Input
-          label="Pay rate"
+          label={PAY_RATE_LABELS[payType]}
           type="number"
           step="0.01"
           {...register('payRate', { valueAsNumber: true })}
           error={errors.payRate?.message}
         />
+        {payType === 'Fixed' && (
+          <p className="text-xs text-muted">
+            Every payroll run for this teacher pays this flat amount, no matter how many sessions they held.
+          </p>
+        )}
+        {payType === 'Percentage' && (
+          <p className="text-xs text-muted">
+            Every payroll run pays this percentage of the payments actually collected, in that period, for
+            packages on courses this teacher teaches.
+          </p>
+        )}
 
         {serverError && <p className="text-sm text-coral">{serverError}</p>}
 
