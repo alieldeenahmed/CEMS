@@ -1,6 +1,7 @@
 using CEMS.Application.Payroll;
 using CEMS.Application.Payroll.Commands.ApproveStaffPayrollRun;
 using CEMS.Application.Payroll.Commands.MarkStaffPayrollRunPaid;
+using CEMS.Application.Payroll.Commands.UpdateStaffPayrollRun;
 using CEMS.Application.Payroll.Queries.GenerateStaffPayStub;
 using CEMS.Domain.Users;
 using MediatR;
@@ -30,6 +31,14 @@ public class StaffPayrollRunsController : ControllerBase
         return File(pdfBytes, "application/pdf", $"paystub-{id}.pdf");
     }
 
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = RoleNames.Owner)]
+    public async Task<ActionResult<StaffPayrollRunDto>> Update(Guid id, UpdateStaffPayrollRunRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new UpdateStaffPayrollRunCommand(id, request.Amount), cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost("{id:guid}/approve")]
     [Authorize(Roles = RoleNames.Owner)]
     public async Task<ActionResult<StaffPayrollRunDto>> Approve(Guid id, CancellationToken cancellationToken)
@@ -46,3 +55,5 @@ public class StaffPayrollRunsController : ControllerBase
         return Ok(result);
     }
 }
+
+public record UpdateStaffPayrollRunRequest(decimal Amount);

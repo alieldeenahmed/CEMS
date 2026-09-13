@@ -127,6 +127,17 @@ function invalidateStaffRun(queryClient: ReturnType<typeof useQueryClient>, user
   queryClient.invalidateQueries({ queryKey: ['my-staff-payroll-runs'] })
 }
 
+export function useUpdateStaffPayrollRun(userId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ runId, amount }: { runId: string; amount: number }) => {
+      const { data } = await apiClient.put<StaffPayrollRun>(`/staff-payroll-runs/${runId}`, { amount })
+      return data
+    },
+    onSuccess: () => invalidateStaffRun(queryClient, userId),
+  })
+}
+
 export function useApproveStaffPayrollRun(userId: string) {
   const queryClient = useQueryClient()
   return useMutation({
