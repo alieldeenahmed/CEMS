@@ -5,13 +5,16 @@ interface ModalProps {
   title: string
   onClose: () => void
   children: ReactNode
+  /** Fixed height for the scrollable body (e.g. "h-[500px]") so the modal doesn't resize as its
+   * content changes - only pass this when the modal's content can grow/shrink between states. */
+  bodyClassName?: string
 }
 
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, onClose, children, bodyClassName }: ModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
-      <div className="w-full max-w-lg rounded-lg bg-paper p-6 shadow-lg">
-        <div className="mb-5 flex items-center justify-between">
+      <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-lg bg-paper shadow-lg">
+        <div className="flex items-center justify-between border-b border-line px-6 py-5">
           <h2 className="font-serif text-lg font-semibold text-navy">{title}</h2>
           <button
             type="button"
@@ -22,7 +25,11 @@ export function Modal({ title, onClose, children }: ModalProps) {
             <X size={18} />
           </button>
         </div>
-        {children}
+        <div
+          className={`overflow-y-auto p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${bodyClassName ?? ''}`}
+        >
+          {children}
+        </div>
       </div>
     </div>
   )

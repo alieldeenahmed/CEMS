@@ -160,7 +160,7 @@ function CreateStudentModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal title="New student" onClose={onClose}>
+    <Modal title="New student" onClose={onClose} bodyClassName="h-[520px]">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input label="Full name" {...register('fullName')} error={errors.fullName?.message} />
         <Input
