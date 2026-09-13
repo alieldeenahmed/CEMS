@@ -6,6 +6,7 @@ import { HomePage } from '@/features/dashboard/HomePage'
 import { CoursesPage } from '@/features/courses/CoursesPage'
 import { CurriculaPage } from '@/features/curricula/CurriculaPage'
 import { ExamsPage } from '@/features/exams/ExamsPage'
+import { PaymentsPage } from '@/features/payments/PaymentsPage'
 import { SchedulingPage } from '@/features/scheduling/SchedulingPage'
 import { StaffPage } from '@/features/staff/StaffPage'
 import { StudentsPage } from '@/features/students/StudentsPage'
@@ -36,7 +37,7 @@ export const router = createBrowserRouter([
           { path: '/scheduling', element: <SchedulingPage /> },
           { path: '/attendance', element: <AttendancePage /> },
           { path: '/exams', element: <ExamsPage /> },
-          { path: '/payments', element: <ComingSoonPage title="Payments" /> },
+          { path: '/payments', element: <PaymentsPage /> },
           { path: '/payroll', element: <ComingSoonPage title="Payroll" /> },
           { path: '/analytics', element: <ComingSoonPage title="Analytics" /> },
         ],
