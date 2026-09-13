@@ -35,20 +35,20 @@ public class GetAttendanceForSessionQueryHandler : IRequestHandler<GetAttendance
             throw new ForbiddenAccessException("You do not have access to this session.");
         }
 
-        var enrolledStudentIds = await _context.CourseEnrollments
+        var enrolledStudents = await _context.CourseEnrollments
             .Where(e => e.CourseId == session.CourseId && e.Status == CourseEnrollmentStatus.Active)
-            .Select(e => e.StudentId)
+            .Select(e => new { e.StudentId, e.Student.FullName })
+            .OrderBy(e => e.FullName)
             .ToListAsync(cancellationToken);
 
         var existingRecords = await _context.SessionAttendances
             .Where(a => a.CourseSessionId == request.SessionId)
             .ToDictionaryAsync(a => a.StudentId, cancellationToken);
 
-        return enrolledStudentIds
-            .OrderBy(id => id)
-            .Select(studentId => existingRecords.TryGetValue(studentId, out var record)
-                ? new AttendanceRecordDto(record.Id, record.CourseSessionId, record.StudentId, record.Status, record.MarkedAtUtc, record.MarkedByUserId)
-                : new AttendanceRecordDto(null, request.SessionId, studentId, AttendanceStatus.Unmarked, null, null))
+        return enrolledStudents
+            .Select(student => existingRecords.TryGetValue(student.StudentId, out var record)
+                ? new AttendanceRecordDto(record.Id, record.CourseSessionId, record.StudentId, student.FullName, record.Status, record.MarkedAtUtc, record.MarkedByUserId)
+                : new AttendanceRecordDto(null, request.SessionId, student.StudentId, student.FullName, AttendanceStatus.Unmarked, null, null))
             .ToList();
     }
 }

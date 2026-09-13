@@ -6,6 +6,7 @@ public record AttendanceRecordDto(
     Guid? Id,
     Guid CourseSessionId,
     Guid StudentId,
+    string StudentFullName,
     AttendanceStatus Status,
     DateTime? MarkedAtUtc,
     Guid? MarkedByUserId);

@@ -36,11 +36,12 @@ public class MarkAttendanceCommandHandler : IRequestHandler<MarkAttendanceComman
             throw new ForbiddenAccessException("You do not have access to mark attendance for this session.");
         }
 
-        var isEnrolled = await _context.CourseEnrollments.AnyAsync(
-            e => e.StudentId == request.StudentId && e.CourseId == session.CourseId && e.Status == CourseEnrollmentStatus.Active,
-            cancellationToken);
+        var studentFullName = await _context.CourseEnrollments
+            .Where(e => e.StudentId == request.StudentId && e.CourseId == session.CourseId && e.Status == CourseEnrollmentStatus.Active)
+            .Select(e => e.Student.FullName)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (!isEnrolled)
+        if (studentFullName is null)
         {
             throw new BadRequestException(new[] { "This student is not actively enrolled in this session's course." });
         }
@@ -66,6 +67,6 @@ public class MarkAttendanceCommandHandler : IRequestHandler<MarkAttendanceComman
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new AttendanceRecordDto(attendance.Id, attendance.CourseSessionId, attendance.StudentId, attendance.Status, attendance.MarkedAtUtc, attendance.MarkedByUserId);
+        return new AttendanceRecordDto(attendance.Id, attendance.CourseSessionId, attendance.StudentId, studentFullName, attendance.Status, attendance.MarkedAtUtc, attendance.MarkedByUserId);
     }
 }

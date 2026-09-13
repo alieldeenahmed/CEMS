@@ -1,6 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
+import type { CourseSession } from '@/features/scheduling/types'
 import type { AddAvailabilityInput, CreateTeacherInput, Teacher, TeacherAvailability, UpdateTeacherInput } from './types'
+
+export function useMySchedule() {
+  return useQuery({
+    queryKey: ['my-schedule'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<CourseSession[]>('/teachers/my-schedule')
+      return data
+    },
+  })
+}
 
 export function useTeachers() {
   return useQuery({

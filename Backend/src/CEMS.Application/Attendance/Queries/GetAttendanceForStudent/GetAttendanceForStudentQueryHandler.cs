@@ -36,7 +36,7 @@ public class GetAttendanceForStudentQueryHandler : IRequestHandler<GetAttendance
         return await _context.SessionAttendances
             .Where(a => a.StudentId == request.StudentId)
             .OrderByDescending(a => a.CourseSession.StartUtc)
-            .Select(a => new AttendanceRecordDto(a.Id, a.CourseSessionId, a.StudentId, a.Status, a.MarkedAtUtc, a.MarkedByUserId))
+            .Select(a => new AttendanceRecordDto(a.Id, a.CourseSessionId, a.StudentId, student.FullName, a.Status, a.MarkedAtUtc, a.MarkedByUserId))
             .ToListAsync(cancellationToken);
     }
 }

@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router-dom'
+import { AttendancePage } from '@/features/attendance/AttendancePage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
 import { HomePage } from '@/features/dashboard/HomePage'
@@ -32,7 +33,7 @@ export const router = createBrowserRouter([
           { path: '/courses', element: <CoursesPage /> },
           { path: '/curricula', element: <CurriculaPage /> },
           { path: '/scheduling', element: <SchedulingPage /> },
-          { path: '/attendance', element: <ComingSoonPage title="Attendance" /> },
+          { path: '/attendance', element: <AttendancePage /> },
           { path: '/exams', element: <ComingSoonPage title="Exams & Grades" /> },
           { path: '/payments', element: <ComingSoonPage title="Payments" /> },
           { path: '/payroll', element: <ComingSoonPage title="Payroll" /> },
