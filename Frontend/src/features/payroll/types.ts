@@ -20,3 +20,18 @@ export interface PayrollLineItem {
   courseSessionId: string
   amount: number
 }
+
+export interface StaffPayrollRun {
+  id: string
+  userId: string
+  periodStart: string
+  periodEnd: string
+  amount: number
+  status: PayrollRunStatus
+}
+
+export interface GenerateStaffPayrollRunInput {
+  periodStart: string
+  periodEnd: string
+  amount: number
+}

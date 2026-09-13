@@ -44,6 +44,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PayrollRun> PayrollRuns => Set<PayrollRun>();
     public DbSet<PayrollLineItem> PayrollLineItems => Set<PayrollLineItem>();
+    public DbSet<StaffPayrollRun> StaffPayrollRuns => Set<StaffPayrollRun>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

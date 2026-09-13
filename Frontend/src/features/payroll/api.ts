@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
-import type { GeneratePayrollRunInput, PayrollLineItem, PayrollRun } from './types'
+import type {
+  GeneratePayrollRunInput,
+  GenerateStaffPayrollRunInput,
+  PayrollLineItem,
+  PayrollRun,
+  StaffPayrollRun,
+} from './types'
 
 export function usePayrollRunsForTeacher(teacherId: string | null) {
   return useQuery({
@@ -74,6 +80,77 @@ export function useLineItemsForPayrollRun(runId: string | null) {
 
 export async function downloadPayStub(runId: string, periodStart: string, periodEnd: string) {
   const response = await apiClient.get(`/payroll-runs/${runId}/paystub`, { responseType: 'blob' })
+  const url = URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `paystub-${periodStart}-to-${periodEnd}.pdf`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+export function useStaffPayrollRunsForUser(userId: string | null) {
+  return useQuery({
+    queryKey: ['staff-payroll-runs', userId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<StaffPayrollRun[]>(`/users/staff/${userId}/payroll-runs`)
+      return data
+    },
+    enabled: !!userId,
+  })
+}
+
+export function useMyStaffPayrollRuns() {
+  return useQuery({
+    queryKey: ['my-staff-payroll-runs'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<StaffPayrollRun[]>('/users/my-staff-payroll-runs')
+      return data
+    },
+  })
+}
+
+export function useGenerateStaffPayrollRun(userId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: GenerateStaffPayrollRunInput) => {
+      const { data } = await apiClient.post<StaffPayrollRun>(`/users/staff/${userId}/payroll-runs`, input)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['staff-payroll-runs', userId] }),
+  })
+}
+
+function invalidateStaffRun(queryClient: ReturnType<typeof useQueryClient>, userId: string) {
+  queryClient.invalidateQueries({ queryKey: ['staff-payroll-runs', userId] })
+  queryClient.invalidateQueries({ queryKey: ['my-staff-payroll-runs'] })
+}
+
+export function useApproveStaffPayrollRun(userId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (runId: string) => {
+      const { data } = await apiClient.post<StaffPayrollRun>(`/staff-payroll-runs/${runId}/approve`)
+      return data
+    },
+    onSuccess: () => invalidateStaffRun(queryClient, userId),
+  })
+}
+
+export function useMarkStaffPayrollRunPaid(userId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (runId: string) => {
+      const { data } = await apiClient.post<StaffPayrollRun>(`/staff-payroll-runs/${runId}/mark-paid`)
+      return data
+    },
+    onSuccess: () => invalidateStaffRun(queryClient, userId),
+  })
+}
+
+export async function downloadStaffPayStub(runId: string, periodStart: string, periodEnd: string) {
+  const response = await apiClient.get(`/staff-payroll-runs/${runId}/paystub`, { responseType: 'blob' })
   const url = URL.createObjectURL(response.data)
   const link = document.createElement('a')
   link.href = url

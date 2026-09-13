@@ -107,7 +107,12 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Receipt,
         roles: [ROLES.Owner, ROLES.BranchManager, ROLES.FrontDesk],
       },
-      { label: 'Payroll', path: '/payroll', icon: Wallet, roles: [ROLES.Owner, ROLES.Teacher] },
+      {
+        label: 'Payroll',
+        path: '/payroll',
+        icon: Wallet,
+        roles: [ROLES.Owner, ROLES.Teacher, ROLES.FrontDesk, ROLES.BranchManager],
+      },
       {
         label: 'Analytics',
         path: '/analytics',

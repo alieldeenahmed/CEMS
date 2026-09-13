@@ -35,6 +35,7 @@ public interface IApplicationDbContext
     DbSet<Payment> Payments { get; }
     DbSet<PayrollRun> PayrollRuns { get; }
     DbSet<PayrollLineItem> PayrollLineItems { get; }
+    DbSet<StaffPayrollRun> StaffPayrollRuns { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

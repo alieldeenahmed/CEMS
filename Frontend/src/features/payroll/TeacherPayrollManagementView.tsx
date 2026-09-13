@@ -7,7 +7,7 @@ import { usePayrollRunsForTeacher } from './api'
 import { GenerateRunModal } from './GenerateRunModal'
 import { PayrollRunsList } from './PayrollRunsList'
 
-export function StaffPayrollView() {
+export function TeacherPayrollManagementView() {
   const { data: teachers } = useTeachers()
   const [teacherId, setTeacherId] = useState('')
   const { data: runs, isLoading } = usePayrollRunsForTeacher(teacherId || null)
