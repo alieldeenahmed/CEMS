@@ -11,6 +11,8 @@ public interface IIdentityService
     Task<List<AuthenticatedUser>> GetStaffUsersAsync();
 
     Task SetUserActiveAsync(Guid userId, bool isActive);
+
+    Task<bool> AnyUsersExistAsync();
 }
 
 public record CreateUserResult(bool Succeeded, Guid UserId, IReadOnlyList<string> Errors);

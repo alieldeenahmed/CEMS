@@ -24,10 +24,7 @@ public class GetGuardiansForStudentQueryHandler : IRequestHandler<GetGuardiansFo
         var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == request.StudentId, cancellationToken)
             ?? throw new NotFoundException(nameof(Student), request.StudentId);
 
-        var hasAccess = _currentUser.IsInRole(RoleNames.Owner)
-            || (_currentUser.IsInRole(RoleNames.Parent) && await _context.StudentGuardians
-                .AnyAsync(sg => sg.StudentId == student.Id && sg.Guardian.UserId == _currentUser.UserId, cancellationToken))
-            || _currentUser.HasAccessToBranch(student.CurrentBranchId);
+        var hasAccess = _currentUser.IsInRole(RoleNames.Owner) || _currentUser.HasAccessToBranch(student.CurrentBranchId);
 
         if (!hasAccess)
         {
@@ -36,7 +33,7 @@ public class GetGuardiansForStudentQueryHandler : IRequestHandler<GetGuardiansFo
 
         return await _context.StudentGuardians
             .Where(sg => sg.StudentId == request.StudentId)
-            .Select(sg => new GuardianDto(sg.Guardian.Id, sg.Guardian.FullName, sg.Guardian.Phone, sg.Guardian.Email, sg.Guardian.UserId))
+            .Select(sg => new GuardianDto(sg.Guardian.Id, sg.Guardian.FullName, sg.Guardian.Phone, sg.Guardian.Email))
             .ToListAsync(cancellationToken);
     }
 }

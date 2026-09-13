@@ -15,7 +15,6 @@ namespace CEMS.Api.Controllers;
 public class GuardiansController : ControllerBase
 {
     private const string StaffRoles = RoleNames.Owner + "," + RoleNames.BranchManager + "," + RoleNames.FrontDesk;
-    private const string ViewRoles = StaffRoles + "," + RoleNames.Parent;
 
     private readonly IMediator _mediator;
 
@@ -33,7 +32,7 @@ public class GuardiansController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = ViewRoles)]
+    [Authorize(Roles = StaffRoles)]
     public async Task<ActionResult<GuardianDto>> GetGuardianById(Guid id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetGuardianByIdQuery(id), cancellationToken);

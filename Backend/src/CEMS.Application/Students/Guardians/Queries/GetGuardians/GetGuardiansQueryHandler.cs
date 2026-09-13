@@ -18,7 +18,7 @@ public class GetGuardiansQueryHandler : IRequestHandler<GetGuardiansQuery, List<
     {
         return await _context.Guardians
             .OrderBy(g => g.FullName)
-            .Select(g => new GuardianDto(g.Id, g.FullName, g.Phone, g.Email, g.UserId))
+            .Select(g => new GuardianDto(g.Id, g.FullName, g.Phone, g.Email))
             .ToListAsync(cancellationToken);
     }
 }

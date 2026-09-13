@@ -11,7 +11,6 @@ const ROLE_LABELS: Record<string, string> = {
   BranchManager: 'Branch Manager',
   FrontDesk: 'Front Desk',
   Teacher: 'Teacher',
-  Parent: 'Parent',
 }
 
 export function StaffPage() {

@@ -5,7 +5,6 @@ export const ROLES = {
   BranchManager: 'BranchManager',
   Teacher: 'Teacher',
   FrontDesk: 'FrontDesk',
-  Parent: 'Parent',
 } as const
 
 export type Role = (typeof ROLES)[keyof typeof ROLES]

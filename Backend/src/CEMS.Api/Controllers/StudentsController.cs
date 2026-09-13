@@ -16,7 +16,6 @@ using CEMS.Application.Students.Commands.LinkGuardian;
 using CEMS.Application.Students.Commands.UnlinkGuardian;
 using CEMS.Application.Students.Commands.UpdateStudent;
 using CEMS.Application.Students.Queries.GetGuardiansForStudent;
-using CEMS.Application.Students.Queries.GetMyChildren;
 using CEMS.Application.Students.Queries.GetStudentById;
 using CEMS.Application.Students.Queries.GetStudents;
 using CEMS.Domain.Students;
@@ -31,7 +30,7 @@ namespace CEMS.Api.Controllers;
 [Route("api/students")]
 public class StudentsController : ControllerBase
 {
-    private const string ViewRoles = RoleNames.Owner + "," + RoleNames.BranchManager + "," + RoleNames.FrontDesk + "," + RoleNames.Parent;
+    private const string ViewRoles = RoleNames.Owner + "," + RoleNames.BranchManager + "," + RoleNames.FrontDesk;
     private const string ManageRoles = RoleNames.Owner + "," + RoleNames.BranchManager + "," + RoleNames.FrontDesk;
 
     private readonly IMediator _mediator;
@@ -46,14 +45,6 @@ public class StudentsController : ControllerBase
     public async Task<ActionResult<List<StudentDto>>> GetStudents(CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetStudentsQuery(), cancellationToken);
-        return Ok(result);
-    }
-
-    [HttpGet("my-children")]
-    [Authorize(Roles = RoleNames.Parent)]
-    public async Task<ActionResult<List<StudentDto>>> GetMyChildren(CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(new GetMyChildrenQuery(), cancellationToken);
         return Ok(result);
     }
 

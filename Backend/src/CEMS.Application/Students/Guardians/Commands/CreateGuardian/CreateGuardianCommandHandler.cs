@@ -21,8 +21,7 @@ public class CreateGuardianCommandHandler : IRequestHandler<CreateGuardianComman
             Id = Guid.NewGuid(),
             FullName = request.FullName,
             Phone = request.Phone,
-            Email = request.Email,
-            UserId = null
+            Email = request.Email
         };
 
         _context.Guardians.Add(guardian);

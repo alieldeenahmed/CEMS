@@ -2,7 +2,6 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { ROLES } from '@/features/auth/constants'
 import { FrontDeskOverview } from './FrontDeskOverview'
 import { OwnerOverview } from './OwnerOverview'
-import { ParentOverview } from './ParentOverview'
 import { TeacherOverview } from './TeacherOverview'
 
 export function HomePage() {
@@ -19,7 +18,6 @@ export function HomePage() {
         {hasRole(ROLES.Owner, ROLES.BranchManager) && <OwnerOverview />}
         {hasRole(ROLES.FrontDesk) && <FrontDeskOverview />}
         {hasRole(ROLES.Teacher) && <TeacherOverview />}
-        {hasRole(ROLES.Parent) && <ParentOverview />}
       </div>
     </div>
   )

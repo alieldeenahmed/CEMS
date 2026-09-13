@@ -6,5 +6,4 @@ public static class RoleNames
     public const string BranchManager = "BranchManager";
     public const string Teacher = "Teacher";
     public const string FrontDesk = "FrontDesk";
-    public const string Parent = "Parent";
 }

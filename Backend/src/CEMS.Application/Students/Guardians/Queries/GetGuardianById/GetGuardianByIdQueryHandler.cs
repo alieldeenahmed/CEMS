@@ -24,10 +24,9 @@ public class GetGuardianByIdQueryHandler : IRequestHandler<GetGuardianByIdQuery,
         var guardian = await _context.Guardians.FirstOrDefaultAsync(g => g.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Guardian), request.Id);
 
-        var isOwnRecord = _currentUser.IsInRole(RoleNames.Parent) && guardian.UserId == _currentUser.UserId;
         var isStaff = _currentUser.IsInRole(RoleNames.Owner) || _currentUser.IsInRole(RoleNames.BranchManager) || _currentUser.IsInRole(RoleNames.FrontDesk);
 
-        if (!isStaff && !isOwnRecord)
+        if (!isStaff)
         {
             throw new ForbiddenAccessException("You do not have access to this guardian record.");
         }

@@ -17,15 +17,10 @@
 
 .PARAMETER ApiBaseUrl
     Base URL of the running API. Defaults to http://localhost:5080.
-
-.PARAMETER PsqlPath
-    Path to psql.exe, used only once to bootstrap the first Owner account (see README.md --
-    there is no API endpoint for creating an Owner, by design).
 #>
 
 param(
-    [string]$ApiBaseUrl = "http://localhost:5080",
-    [string]$PsqlPath = "C:\Program Files\PostgreSQL\18\bin\psql.exe"
+    [string]$ApiBaseUrl = "http://localhost:5080"
 )
 
 $ErrorActionPreference = "Stop"
@@ -65,26 +60,13 @@ Write-Host "`n[1/12] Bootstrapping Owner account..." -ForegroundColor Yellow
 $ownerEmail = "owner@cems.demo"
 $ownerPassword = "DemoPass123"
 
-Invoke-Api POST "/api/auth/register" $null @{
+# Every other account-creation path requires an authenticated Owner/staff token, so the very first
+# account has to come from somewhere else. bootstrap-owner is anonymous but self-disables the
+# instant any user exists (see BootstrapOwnerCommandHandler) -- it can't be used as a signup path.
+$ownerToken = (Invoke-Api POST "/api/auth/bootstrap-owner" $null @{
     email = $ownerEmail; password = $ownerPassword; fullName = "Dana Owner"; phoneNumber = "0100000001"
-} | Out-Null
+}).token
 
-$connectionString = [System.Environment]::GetEnvironmentVariable("ConnectionStrings__Default", "User")
-if (-not $connectionString) { throw "ConnectionStrings__Default is not set. See README.md 'Local setup'." }
-$pgPassword = ($connectionString -replace '.*Password=', '')
-
-$sqlFile = New-TemporaryFile
-@"
-INSERT INTO "AspNetUserRoles" ("UserId", "RoleId")
-SELECT "Id", '11111111-1111-1111-1111-111111111111' FROM "AspNetUsers" WHERE "Email" = '$ownerEmail';
-"@ | Set-Content $sqlFile
-
-$env:PGPASSWORD = $pgPassword
-& $PsqlPath -U postgres -h localhost -d cems -f $sqlFile.FullName | Out-Null
-Remove-Item Env:\PGPASSWORD
-Remove-Item $sqlFile
-
-$ownerToken = (Invoke-Api POST "/api/auth/login" $null @{ email = $ownerEmail; password = $ownerPassword }).token
 Write-Host "  Owner ready: $ownerEmail / $ownerPassword"
 
 # --- 2. Branches and rooms ---------------------------------------------------------------------
@@ -141,15 +123,13 @@ Invoke-Api POST "/api/teachers/$($teacherUptown.id)/availability" $ownerToken @{
 
 Write-Host "  Both teachers assigned to their branch with Monday 09:00-17:00 availability"
 
-# --- 6. Parents and students --------------------------------------------------------------------
-Write-Host "`n[6/12] Registering parents and creating students..." -ForegroundColor Yellow
+# --- 6. Guardians and students --------------------------------------------------------------------
+Write-Host "`n[6/12] Creating guardian contacts and students..." -ForegroundColor Yellow
 
-$parent1 = Invoke-Api POST "/api/auth/register" $null @{ email = "parent1@cems.demo"; password = "DemoPass123"; fullName = "Pat Parent"; phoneNumber = "0400000001" }
-$parent2 = Invoke-Api POST "/api/auth/register" $null @{ email = "parent2@cems.demo"; password = "DemoPass123"; fullName = "Robin Parent"; phoneNumber = "0400000002" }
-
-$guardians = Invoke-Api GET "/api/guardians" $ownerToken
-$guardian1 = $guardians | Where-Object { $_.email -eq "parent1@cems.demo" }
-$guardian2 = $guardians | Where-Object { $_.email -eq "parent2@cems.demo" }
+# Guardians are contact records only (name/phone/email) - CEMS has no parent-facing login or
+# self-service portal, so these are created directly by staff rather than via self-registration.
+$guardian1 = Invoke-Api POST "/api/guardians" $ownerToken @{ fullName = "Pat Parent"; phone = "0400000001"; email = "pat.parent@example.com" }
+$guardian2 = Invoke-Api POST "/api/guardians" $ownerToken @{ fullName = "Robin Parent"; phone = "0400000002"; email = "robin.parent@example.com" }
 
 $student1 = Invoke-Api POST "/api/students" $ownerToken @{ fullName = "Sam Student"; dateOfBirth = "2013-04-12"; gender = "Male"; branchId = $downtown.id }
 $student2 = Invoke-Api POST "/api/students" $ownerToken @{ fullName = "Sky Student"; dateOfBirth = "2014-08-22"; gender = "Female"; branchId = $downtown.id }
@@ -159,7 +139,7 @@ Invoke-Api POST "/api/students/$($student1.id)/guardians" $ownerToken @{ guardia
 Invoke-Api POST "/api/students/$($student2.id)/guardians" $ownerToken @{ guardianId = $guardian1.id; relationshipType = "Father"; isPrimaryContact = $true } | Out-Null
 Invoke-Api POST "/api/students/$($student3.id)/guardians" $ownerToken @{ guardianId = $guardian2.id; relationshipType = "Mother"; isPrimaryContact = $true } | Out-Null
 
-Write-Host "  2 parents, 3 students (Pat Parent has 2 kids across the same branch)"
+Write-Host "  2 guardian contacts, 3 students (Pat Parent has 2 kids across the same branch)"
 
 # --- 7. Enrollments ------------------------------------------------------------------------------
 Write-Host "`n[7/12] Enrolling students in courses..." -ForegroundColor Yellow
@@ -244,4 +224,4 @@ Write-Host "  Owner:          $ownerEmail"
 Write-Host "  BranchManager:  bm.downtown@cems.demo (Downtown), bm.uptown@cems.demo (Uptown)"
 Write-Host "  FrontDesk:      fd.downtown@cems.demo (Downtown)"
 Write-Host "  Teacher:        teacher.downtown@cems.demo (Downtown, Hourly), teacher.uptown@cems.demo (Uptown, PerSession)"
-Write-Host "  Parent:         parent1@cems.demo (2 kids: Sam, Sky), parent2@cems.demo (1 kid: Riley)"
+Write-Host "  Guardians:      Pat Parent (contact only, 2 kids: Sam, Sky), Robin Parent (contact only, 1 kid: Riley)"

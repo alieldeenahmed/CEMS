@@ -26,10 +26,7 @@ public class GetInvoiceByIdQueryHandler : IRequestHandler<GetInvoiceByIdQuery, I
             .FirstOrDefaultAsync(i => i.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Invoice), request.Id);
 
-        var hasAccess = _currentUser.IsInRole(RoleNames.Owner)
-            || (_currentUser.IsInRole(RoleNames.Parent) && await _context.StudentGuardians
-                .AnyAsync(sg => sg.StudentId == invoice.StudentId && sg.Guardian.UserId == _currentUser.UserId, cancellationToken))
-            || _currentUser.HasAccessToBranch(invoice.Student.CurrentBranchId);
+        var hasAccess = _currentUser.IsInRole(RoleNames.Owner) || _currentUser.HasAccessToBranch(invoice.Student.CurrentBranchId);
 
         if (!hasAccess)
         {

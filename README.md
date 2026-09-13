@@ -32,7 +32,11 @@ over HTTP.
 | BranchManager | One branch |
 | Teacher | One or more branches (floating) |
 | FrontDesk | One branch |
-| Parent | Their own children only, regardless of branch |
+
+CEMS has no parent-facing login or self-service portal — it's a tool the
+school's staff run the business on, not a consumer app. Guardians (name,
+phone, email, relationship, primary-contact flag) are plain contact records
+staff manage on a student, with no account or login attached.
 
 Every non-Owner request is scoped to the caller's branch(es) at the API/query
 level — never just hidden in the UI.
@@ -102,28 +106,33 @@ after `var app = builder.Build();` in `Program.cs`, `dotnet run` once, then
 remove it. Normal process execution isn't affected by this, only `dotnet-ef`'s
 reflection-based assembly loading is.
 
-There's currently no seeded Owner account and no self-registration path to
-one (self-registration always creates a `Parent`, and creating an `Owner`
-isn't exposed through any endpoint by design). To bootstrap the very first
-Owner locally: register a normal account through `/api/auth/register`, then
-manually insert its role in the database —
+There's no general self-registration endpoint — every account is created by
+an Owner or staff member via `POST /api/users/staff`, matching a tool the
+school's staff run rather than a product people sign up for. That leaves a
+chicken-and-egg problem for the very first account, since creating staff
+already requires an authenticated Owner token. `POST /api/auth/bootstrap-owner`
+solves it: it's anonymous, but `BootstrapOwnerCommandHandler` checks whether
+any user exists at all and rejects with 403 the instant one does, so it
+self-disables after the very first call and can never be used as a general
+signup path.
 
-```sql
-INSERT INTO "AspNetUserRoles" ("UserId", "RoleId")
-SELECT "Id", '11111111-1111-1111-1111-111111111111' FROM "AspNetUsers" WHERE "Email" = 'you@example.com';
+```bash
+curl -X POST https://localhost:7099/api/auth/bootstrap-owner \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","password":"YourPassword123","fullName":"Your Name","phoneNumber":"0100000000"}'
 ```
 
-— then log in again to get a token carrying the `Owner` role. Every other
-account (BranchManager/Teacher/FrontDesk) can be created normally afterward
-via `POST /api/users/staff`.
+The response is a normal `AuthResultDto` with a ready-to-use token carrying
+the `Owner` role. Every other account (BranchManager/Teacher/FrontDesk) is
+created afterward via `POST /api/users/staff`.
 
 ### Demo data
 
 `scripts/seed-demo-data.ps1` populates a fresh, empty `cems` database with a
 realistic dataset — 2 branches, staff at every role, teachers with
-availability, parents with linked students, enrollments, scheduled sessions,
-attendance, a graded exam, invoices in every payment state (paid/partial/
-overdue), and an approved payroll run. It's a script that calls the real
+availability, students with linked guardian contacts, enrollments, scheduled
+sessions, attendance, a graded exam, invoices in every payment state (paid/
+partial/overdue), and an approved payroll run. It's a script that calls the real
 running API end to end, not a raw SQL dump — every row passes through actual
 password hashing, RBAC, scheduling conflict checks, and payroll computation,
 the same way this whole backend has been verified throughout development.
@@ -147,22 +156,24 @@ Prints every demo account's email at the end (all passwords: `DemoPass123`).
 - [x] `ApplicationUser` (Identity) + `UserBranchAssignment`
 - [x] `ApplicationDbContext`
 - [x] DI wiring (Program.cs, connection string) + first migration
-- [x] Role seeding (Owner, BranchManager, Teacher, FrontDesk, Parent)
-- [x] Auth endpoints (register/login, JWT issuing)
+- [x] Role seeding (Owner, BranchManager, Teacher, FrontDesk)
+- [x] Auth endpoints (login, JWT issuing; `bootstrap-owner` for the very
+      first account only — see "Local setup" below)
 - [x] Branch/Room CRUD endpoints, branch-scoped RBAC
 - [x] Admin endpoint for creating staff accounts (Owner creates any staff
       role; BranchManager creates Teacher/FrontDesk for their own branch only)
 - [x] Student Management: Student/Guardian CRUD, student-guardian linking,
-      branch-scoped and Parent-scoped RBAC (self-registration auto-creates a
-      Guardian record; branch transfer with history is deferred — see below)
+      branch-scoped RBAC. Guardians are plain contact records (name/phone/
+      email/relationship/primary-contact) with no login — CEMS has no
+      parent-facing portal (branch transfer with history is deferred — see
+      below)
 - [x] Teacher Management: Teacher profile CRUD (Owner-only, pay rate is
       sensitive), floating branch assignment, self-managed availability
       windows (teacher/BranchManager/Owner, all branch-scoped)
 - [x] Course & Curriculum Management: Curriculum/Subject (org-wide catalog,
       viewable by anyone, Owner-only to edit), Course (branch-scoped,
       Owner/BranchManager manage it), CourseEnrollment (soft-drop, enforces
-      student and course share a branch; Parent can view their child's
-      enrollments)
+      student and course share a branch)
 - [x] Scheduling & Room Booking: `CourseSession` with conflict-checking
       against room double-booking, teacher double-booking, and teacher
       declared availability; Owner/BranchManager can override a detected
@@ -176,16 +187,15 @@ Prints every demo account's email at the end (all passwords: `DemoPass123`).
       or Owner/BranchManager (branch-scoped admin correction) — never
       FrontDesk. Roster view shows every actively-enrolled student
       defaulting to `Unmarked` (no background job for no-show flagging, per
-      the earlier decision — staff review is manual). History view is
-      Parent-scoped like enrollments/guardians.
+      the earlier decision — staff review is manual).
 - [x] Exams & Grades: `Exam` (per course) and `Grade` (upsert, like
       Attendance) managed by Owner/BranchManager (branch-scoped) or Teacher
       — but only for courses they actually teach, checked live against
       `CourseSession.TeacherId`, not just branch membership. FrontDesk views
       only. Exam roster mirrors the Attendance pattern (every enrolled
       student, `null` score if ungraded); student grade history is
-      staff-admin/Parent-scoped, deliberately excluding Teacher (a teacher
-      shouldn't see a student's grades from courses they don't teach).
+      staff-only, deliberately excluding Teacher (a teacher shouldn't see a
+      student's grades from courses they don't teach).
       Report cards render as real PDFs via QuestPDF (`IReportCardGenerator`
       abstraction, same pattern as `IIdentityService`), grouped by course.
 - [x] Payments & Fees: `Package` (course-scoped billing catalog),
@@ -198,8 +208,7 @@ Prints every demo account's email at the end (all passwords: `DemoPass123`).
       unlike the view-only role they had in Attendance/Exams); cancelling
       an invoice is Owner/BranchManager-only and blocked once fully paid.
       Dedicated outstanding-balance endpoint sums unpaid amounts across all
-      non-cancelled invoices for a student, Parent-visible for their own
-      child.
+      non-cancelled invoices for a student.
 - [x] Payroll: `PayrollRun` (Draft→Approved→Paid) auto-computed from every
       non-cancelled `CourseSession` in the period, priced by `PayType`
       (Hourly × duration, or flat PerSession) — a center-cancelled session

@@ -15,7 +15,7 @@ namespace CEMS.Api.Controllers;
 [Route("api/invoices")]
 public class InvoicesController : ControllerBase
 {
-    private const string ViewRoles = RoleNames.Owner + "," + RoleNames.BranchManager + "," + RoleNames.FrontDesk + "," + RoleNames.Parent;
+    private const string ViewRoles = RoleNames.Owner + "," + RoleNames.BranchManager + "," + RoleNames.FrontDesk;
     private const string PaymentRoles = RoleNames.Owner + "," + RoleNames.BranchManager + "," + RoleNames.FrontDesk;
     private const string CancelRoles = RoleNames.Owner + "," + RoleNames.BranchManager;
 

@@ -1,6 +1,5 @@
 using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
-using CEMS.Domain.Users;
 using CEMS.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -66,19 +65,7 @@ public class IdentityService : IIdentityService
 
     public async Task<List<AuthenticatedUser>> GetStaffUsersAsync()
     {
-        var staffRoleIds = await _context.Roles
-            .Where(r => r.Name != RoleNames.Parent)
-            .Select(r => r.Id)
-            .ToListAsync();
-
-        var staffUserIds = await _context.UserRoles
-            .Where(ur => staffRoleIds.Contains(ur.RoleId))
-            .Select(ur => ur.UserId)
-            .Distinct()
-            .ToListAsync();
-
         var users = await _context.Users
-            .Where(u => staffUserIds.Contains(u.Id))
             .OrderBy(u => u.FullName)
             .ToListAsync();
 
@@ -99,6 +86,8 @@ public class IdentityService : IIdentityService
         user.IsActive = isActive;
         await _userManager.UpdateAsync(user);
     }
+
+    public Task<bool> AnyUsersExistAsync() => _context.Users.AnyAsync();
 
     private async Task<AuthenticatedUser> BuildAuthenticatedUserAsync(ApplicationUser user)
     {

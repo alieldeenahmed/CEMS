@@ -67,25 +67,3 @@ export function useRecordGrade(examId: string) {
   })
 }
 
-export function useGradesForStudent(studentId: string | null) {
-  return useQuery({
-    queryKey: ['student-grades', studentId],
-    queryFn: async () => {
-      const { data } = await apiClient.get<Grade[]>(`/students/${studentId}/grades`)
-      return data
-    },
-    enabled: !!studentId,
-  })
-}
-
-export async function downloadReportCard(studentId: string, studentName: string) {
-  const response = await apiClient.get(`/students/${studentId}/report-card`, { responseType: 'blob' })
-  const url = URL.createObjectURL(response.data)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `report-card-${studentName.replace(/\s+/g, '-').toLowerCase()}.pdf`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-}

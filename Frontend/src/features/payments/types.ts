@@ -46,8 +46,3 @@ export interface RecordPaymentInput {
   paymentDate: string
   method: PaymentMethod
 }
-
-export interface OutstandingBalance {
-  studentId: string
-  totalOutstanding: number
-}

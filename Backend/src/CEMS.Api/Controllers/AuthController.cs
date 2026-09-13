@@ -1,6 +1,6 @@
 using CEMS.Application.Users;
+using CEMS.Application.Users.Commands.BootstrapOwner;
 using CEMS.Application.Users.Commands.Login;
-using CEMS.Application.Users.Commands.Register;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,17 +18,21 @@ public class AuthController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpPost("register")]
+    [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<ActionResult<AuthResultDto>> Register(RegisterCommand command, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthResultDto>> Login(LoginCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
         return Ok(result);
     }
 
-    [HttpPost("login")]
+    // Anonymous by necessity: creating the very first account is a chicken-and-egg problem, since
+    // every other account-creation path requires an already-authenticated Owner/staff token. This
+    // self-disables the moment any user exists (see BootstrapOwnerCommandHandler), so it can't be
+    // used as a general signup endpoint.
+    [HttpPost("bootstrap-owner")]
     [AllowAnonymous]
-    public async Task<ActionResult<AuthResultDto>> Login(LoginCommand command, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthResultDto>> BootstrapOwner(BootstrapOwnerCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
         return Ok(result);

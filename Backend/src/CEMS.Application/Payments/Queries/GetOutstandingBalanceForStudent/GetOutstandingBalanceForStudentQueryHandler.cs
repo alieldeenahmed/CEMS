@@ -24,10 +24,7 @@ public class GetOutstandingBalanceForStudentQueryHandler : IRequestHandler<GetOu
         var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == request.StudentId, cancellationToken)
             ?? throw new NotFoundException(nameof(Student), request.StudentId);
 
-        var hasAccess = _currentUser.IsInRole(RoleNames.Owner)
-            || (_currentUser.IsInRole(RoleNames.Parent) && await _context.StudentGuardians
-                .AnyAsync(sg => sg.StudentId == student.Id && sg.Guardian.UserId == _currentUser.UserId, cancellationToken))
-            || _currentUser.HasAccessToBranch(student.CurrentBranchId);
+        var hasAccess = _currentUser.IsInRole(RoleNames.Owner) || _currentUser.HasAccessToBranch(student.CurrentBranchId);
 
         if (!hasAccess)
         {

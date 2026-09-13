@@ -98,13 +98,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 Name = RoleNames.FrontDesk,
                 NormalizedName = RoleNames.FrontDesk.ToUpperInvariant(),
                 ConcurrencyStamp = "44444444-4444-4444-4444-444444444444"
-            },
-            new IdentityRole<Guid>
-            {
-                Id = Guid.Parse("55555555-5555-5555-5555-555555555555"),
-                Name = RoleNames.Parent,
-                NormalizedName = RoleNames.Parent.ToUpperInvariant(),
-                ConcurrencyStamp = "55555555-5555-5555-5555-555555555555"
             }
         );
     }

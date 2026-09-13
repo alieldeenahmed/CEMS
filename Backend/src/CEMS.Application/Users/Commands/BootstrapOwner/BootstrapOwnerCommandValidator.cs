@@ -1,10 +1,10 @@
 using FluentValidation;
 
-namespace CEMS.Application.Users.Commands.Register;
+namespace CEMS.Application.Users.Commands.BootstrapOwner;
 
-public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
+public class BootstrapOwnerCommandValidator : AbstractValidator<BootstrapOwnerCommand>
 {
-    public RegisterCommandValidator()
+    public BootstrapOwnerCommandValidator()
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress();
         RuleFor(x => x.Password).NotEmpty().MinimumLength(8);

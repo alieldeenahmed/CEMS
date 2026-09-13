@@ -25,10 +25,6 @@ public class GetStudentsQueryHandler : IRequestHandler<GetStudentsQuery, List<St
         {
             query = _context.Students;
         }
-        else if (_currentUser.IsInRole(RoleNames.Parent))
-        {
-            query = _context.Students.Where(s => s.StudentGuardians.Any(sg => sg.Guardian.UserId == _currentUser.UserId));
-        }
         else
         {
             var branchIds = _currentUser.BranchIds;

@@ -31,7 +31,6 @@ export interface Guardian {
   fullName: string
   phone: string
   email: string
-  userId: string | null
 }
 
 export interface CreateGuardianInput {

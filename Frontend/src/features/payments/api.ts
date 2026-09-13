@@ -1,14 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
-import type {
-  CreateInvoiceInput,
-  Invoice,
-  OutstandingBalance,
-  Package,
-  PackageInput,
-  Payment,
-  RecordPaymentInput,
-} from './types'
+import type { CreateInvoiceInput, Invoice, Package, PackageInput, Payment, RecordPaymentInput } from './types'
 
 export function usePackagesForCourse(courseId: string | null) {
   return useQuery({
@@ -72,17 +64,6 @@ export function useCreateInvoice(studentId: string) {
       return data
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoices', studentId] }),
-  })
-}
-
-export function useOutstandingBalance(studentId: string | null) {
-  return useQuery({
-    queryKey: ['balance', studentId],
-    queryFn: async () => {
-      const { data } = await apiClient.get<OutstandingBalance>(`/students/${studentId}/balance`)
-      return data
-    },
-    enabled: !!studentId,
   })
 }
 
