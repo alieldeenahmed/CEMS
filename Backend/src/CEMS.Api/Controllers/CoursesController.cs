@@ -8,6 +8,7 @@ using CEMS.Application.Courses.Queries.GetCourseById;
 using CEMS.Application.Courses.Queries.GetCourses;
 using CEMS.Application.Courses.Commands.PromoteFromWaitlist;
 using CEMS.Application.Courses.Queries.GetEnrollmentsForCourse;
+using CEMS.Application.Courses.Queries.GetMyCourses;
 using CEMS.Domain.Courses;
 using CEMS.Domain.Users;
 using MediatR;
@@ -35,6 +36,14 @@ public class CoursesController : ControllerBase
     public async Task<ActionResult<List<CourseDto>>> GetCourses(CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetCoursesQuery(), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("my-courses")]
+    [Authorize(Roles = RoleNames.Teacher)]
+    public async Task<ActionResult<List<CourseDto>>> GetMyCourses(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetMyCoursesQuery(), cancellationToken);
         return Ok(result);
     }
 

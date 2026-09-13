@@ -36,11 +36,12 @@ public class RecordGradeCommandHandler : IRequestHandler<RecordGradeCommand, Gra
             throw new ForbiddenAccessException("You do not have access to record grades for this exam.");
         }
 
-        var isEnrolled = await _context.CourseEnrollments.AnyAsync(
-            e => e.StudentId == request.StudentId && e.CourseId == exam.CourseId && e.Status == CourseEnrollmentStatus.Active,
-            cancellationToken);
+        var studentFullName = await _context.CourseEnrollments
+            .Where(e => e.StudentId == request.StudentId && e.CourseId == exam.CourseId && e.Status == CourseEnrollmentStatus.Active)
+            .Select(e => e.Student.FullName)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (!isEnrolled)
+        if (studentFullName is null)
         {
             throw new BadRequestException(new[] { "This student is not actively enrolled in this exam's course." });
         }
@@ -72,6 +73,6 @@ public class RecordGradeCommandHandler : IRequestHandler<RecordGradeCommand, Gra
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new GradeDto(grade.Id, grade.ExamId, grade.StudentId, grade.Score, grade.Comments, grade.GradedAtUtc, grade.GradedByUserId);
+        return new GradeDto(grade.Id, grade.ExamId, exam.Name, exam.MaxScore, grade.StudentId, studentFullName, grade.Score, grade.Comments, grade.GradedAtUtc, grade.GradedByUserId);
     }
 }

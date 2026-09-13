@@ -33,20 +33,20 @@ public class GetGradesForExamQueryHandler : IRequestHandler<GetGradesForExamQuer
             throw new ForbiddenAccessException("You do not have access to this exam.");
         }
 
-        var enrolledStudentIds = await _context.CourseEnrollments
+        var enrolledStudents = await _context.CourseEnrollments
             .Where(e => e.CourseId == exam.CourseId && e.Status == CourseEnrollmentStatus.Active)
-            .Select(e => e.StudentId)
+            .Select(e => new { e.StudentId, e.Student.FullName })
+            .OrderBy(e => e.FullName)
             .ToListAsync(cancellationToken);
 
         var existingGrades = await _context.Grades
             .Where(g => g.ExamId == request.ExamId)
             .ToDictionaryAsync(g => g.StudentId, cancellationToken);
 
-        return enrolledStudentIds
-            .OrderBy(id => id)
-            .Select(studentId => existingGrades.TryGetValue(studentId, out var grade)
-                ? new GradeDto(grade.Id, grade.ExamId, grade.StudentId, grade.Score, grade.Comments, grade.GradedAtUtc, grade.GradedByUserId)
-                : new GradeDto(null, request.ExamId, studentId, null, null, null, null))
+        return enrolledStudents
+            .Select(student => existingGrades.TryGetValue(student.StudentId, out var grade)
+                ? new GradeDto(grade.Id, grade.ExamId, exam.Name, exam.MaxScore, grade.StudentId, student.FullName, grade.Score, grade.Comments, grade.GradedAtUtc, grade.GradedByUserId)
+                : new GradeDto(null, request.ExamId, exam.Name, exam.MaxScore, student.StudentId, student.FullName, null, null, null, null))
             .ToList();
     }
 }

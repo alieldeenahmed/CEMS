@@ -12,6 +12,16 @@ export function useCourses() {
   })
 }
 
+export function useMyCourses() {
+  return useQuery({
+    queryKey: ['my-courses'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<Course[]>('/courses/my-courses')
+      return data
+    },
+  })
+}
+
 export function useCreateCourse() {
   const queryClient = useQueryClient()
   return useMutation({

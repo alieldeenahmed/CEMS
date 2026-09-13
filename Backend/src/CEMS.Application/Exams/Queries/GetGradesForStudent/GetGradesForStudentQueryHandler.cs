@@ -36,7 +36,7 @@ public class GetGradesForStudentQueryHandler : IRequestHandler<GetGradesForStude
         return await _context.Grades
             .Where(g => g.StudentId == request.StudentId)
             .OrderByDescending(g => g.Exam.ExamDate)
-            .Select(g => new GradeDto(g.Id, g.ExamId, g.StudentId, g.Score, g.Comments, g.GradedAtUtc, g.GradedByUserId))
+            .Select(g => new GradeDto(g.Id, g.ExamId, g.Exam.Name, g.Exam.MaxScore, g.StudentId, student.FullName, g.Score, g.Comments, g.GradedAtUtc, g.GradedByUserId))
             .ToListAsync(cancellationToken);
     }
 }
