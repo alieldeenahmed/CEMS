@@ -54,7 +54,7 @@ export const NAV_GROUPS: NavGroup[] = [
         label: 'Students',
         path: '/students',
         icon: GraduationCap,
-        roles: [ROLES.Owner, ROLES.BranchManager, ROLES.FrontDesk, ROLES.Teacher],
+        roles: [ROLES.Owner, ROLES.BranchManager, ROLES.FrontDesk],
       },
       {
         label: 'Teachers',

@@ -3,6 +3,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
 import { HomePage } from '@/features/dashboard/HomePage'
 import { StaffPage } from '@/features/staff/StaffPage'
+import { StudentsPage } from '@/features/students/StudentsPage'
 import { ComingSoonPage } from '@/shared/ComingSoonPage'
 import { AppShell } from './layout/AppShell'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -21,7 +22,7 @@ export const router = createBrowserRouter([
           { path: '/', element: <HomePage /> },
           { path: '/branches', element: <BranchesPage /> },
           { path: '/staff', element: <StaffPage /> },
-          { path: '/students', element: <ComingSoonPage title="Students" /> },
+          { path: '/students', element: <StudentsPage /> },
           { path: '/teachers', element: <ComingSoonPage title="Teachers" /> },
           { path: '/my-children', element: <ComingSoonPage title="My Children" /> },
           { path: '/courses', element: <ComingSoonPage title="Courses" /> },
