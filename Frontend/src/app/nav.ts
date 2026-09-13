@@ -84,7 +84,7 @@ export const NAV_GROUPS: NavGroup[] = [
         label: 'Scheduling',
         path: '/scheduling',
         icon: CalendarClock,
-        roles: [ROLES.Owner, ROLES.BranchManager, ROLES.FrontDesk, ROLES.Teacher],
+        roles: [ROLES.Owner, ROLES.BranchManager, ROLES.FrontDesk],
       },
       {
         label: 'Attendance',

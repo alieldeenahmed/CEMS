@@ -4,6 +4,7 @@ import { BranchesPage } from '@/features/branches/BranchesPage'
 import { HomePage } from '@/features/dashboard/HomePage'
 import { CoursesPage } from '@/features/courses/CoursesPage'
 import { CurriculaPage } from '@/features/curricula/CurriculaPage'
+import { SchedulingPage } from '@/features/scheduling/SchedulingPage'
 import { StaffPage } from '@/features/staff/StaffPage'
 import { StudentsPage } from '@/features/students/StudentsPage'
 import { TeachersPage } from '@/features/teachers/TeachersPage'
@@ -30,7 +31,7 @@ export const router = createBrowserRouter([
           { path: '/my-children', element: <ComingSoonPage title="My Children" /> },
           { path: '/courses', element: <CoursesPage /> },
           { path: '/curricula', element: <CurriculaPage /> },
-          { path: '/scheduling', element: <ComingSoonPage title="Scheduling" /> },
+          { path: '/scheduling', element: <SchedulingPage /> },
           { path: '/attendance', element: <ComingSoonPage title="Attendance" /> },
           { path: '/exams', element: <ComingSoonPage title="Exams & Grades" /> },
           { path: '/payments', element: <ComingSoonPage title="Payments" /> },
