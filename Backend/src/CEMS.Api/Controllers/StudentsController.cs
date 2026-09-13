@@ -5,6 +5,10 @@ using CEMS.Application.Courses.Queries.GetEnrollmentsForStudent;
 using CEMS.Application.Exams;
 using CEMS.Application.Exams.Queries.GenerateReportCard;
 using CEMS.Application.Exams.Queries.GetGradesForStudent;
+using CEMS.Application.Payments;
+using CEMS.Application.Payments.Commands.CreateInvoice;
+using CEMS.Application.Payments.Queries.GetInvoicesForStudent;
+using CEMS.Application.Payments.Queries.GetOutstandingBalanceForStudent;
 using CEMS.Application.Students;
 using CEMS.Application.Students.Commands.CreateStudent;
 using CEMS.Application.Students.Commands.DeleteStudent;
@@ -142,7 +146,33 @@ public class StudentsController : ControllerBase
         var pdfBytes = await _mediator.Send(new GenerateReportCardQuery(id), cancellationToken);
         return File(pdfBytes, "application/pdf", $"report-card-{id}.pdf");
     }
+
+    [HttpGet("{id:guid}/invoices")]
+    [Authorize(Roles = ViewRoles)]
+    public async Task<ActionResult<List<InvoiceDto>>> GetInvoicesForStudent(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetInvoicesForStudentQuery(id), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{id:guid}/invoices")]
+    [Authorize(Roles = ManageRoles)]
+    public async Task<ActionResult<InvoiceDto>> CreateInvoice(Guid id, CreateInvoiceRequest request, CancellationToken cancellationToken)
+    {
+        var command = new CreateInvoiceCommand(id, request.PackageId, request.Amount, request.DueDate);
+        var result = await _mediator.Send(command, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/balance")]
+    [Authorize(Roles = ViewRoles)]
+    public async Task<ActionResult<OutstandingBalanceDto>> GetOutstandingBalance(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetOutstandingBalanceForStudentQuery(id), cancellationToken);
+        return Ok(result);
+    }
 }
 
 public record UpdateStudentRequest(string FullName, DateOnly DateOfBirth, Gender Gender, StudentStatus Status);
 public record LinkGuardianRequest(Guid GuardianId, RelationshipType RelationshipType, bool IsPrimaryContact);
+public record CreateInvoiceRequest(Guid? PackageId, decimal? Amount, DateOnly DueDate);

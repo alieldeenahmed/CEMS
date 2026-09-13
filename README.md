@@ -157,8 +157,20 @@ via `POST /api/users/staff`.
       shouldn't see a student's grades from courses they don't teach).
       Report cards render as real PDFs via QuestPDF (`IReportCardGenerator`
       abstraction, same pattern as `IIdentityService`), grouped by course.
+- [x] Payments & Fees: `Package` (course-scoped billing catalog),
+      `Invoice` (amount immutable after creation — set server-side from
+      `Package.Price` if package-based, client-supplied for ad-hoc charges;
+      `Overdue` is a computed DTO field, never stored, no background job),
+      `Payment` (recording one recalculates the invoice's status
+      Pending→PartiallyPaid→Paid automatically). FrontDesk gets real
+      write access here (invoicing/collecting payment is their actual job,
+      unlike the view-only role they had in Attendance/Exams); cancelling
+      an invoice is Owner/BranchManager-only and blocked once fully paid.
+      Dedicated outstanding-balance endpoint sums unpaid amounts across all
+      non-cancelled invoices for a student, Parent-visible for their own
+      child.
 - [ ] Frontend scaffold
-- [ ] Remaining modules: Payments & Fees, Payroll, Analytics Dashboard
+- [ ] Remaining modules: Payroll, Analytics Dashboard
 - [ ] Student branch transfer with history (`StudentBranchHistory`) —
       deliberately deferred until it's the thing being built, not bare CRUD
 - [ ] `TeacherSubject` (which subjects a teacher teaches) — still deferred;

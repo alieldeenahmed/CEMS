@@ -3,6 +3,7 @@ using CEMS.Domain.Attendance;
 using CEMS.Domain.Branches;
 using CEMS.Domain.Courses;
 using CEMS.Domain.Exams;
+using CEMS.Domain.Payments;
 using CEMS.Domain.Students;
 using CEMS.Domain.Teachers;
 using CEMS.Domain.Users;
@@ -37,6 +38,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<SessionAttendance> SessionAttendances => Set<SessionAttendance>();
     public DbSet<Exam> Exams => Set<Exam>();
     public DbSet<Grade> Grades => Set<Grade>();
+    public DbSet<Package> Packages => Set<Package>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<Payment> Payments => Set<Payment>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
