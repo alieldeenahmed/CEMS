@@ -53,6 +53,6 @@ public class CreateTeacherCommandHandler : IRequestHandler<CreateTeacherCommand,
         _context.Teachers.Add(teacher);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new TeacherDto(teacher.Id, teacher.UserId, teacher.HireDate, teacher.PayType, teacher.PayRate, Array.Empty<Guid>());
+        return new TeacherDto(teacher.Id, teacher.UserId, user.FullName, user.Email, teacher.HireDate, teacher.PayType, teacher.PayRate, Array.Empty<Guid>());
     }
 }

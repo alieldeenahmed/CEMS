@@ -4,6 +4,7 @@ import { BranchesPage } from '@/features/branches/BranchesPage'
 import { HomePage } from '@/features/dashboard/HomePage'
 import { StaffPage } from '@/features/staff/StaffPage'
 import { StudentsPage } from '@/features/students/StudentsPage'
+import { TeachersPage } from '@/features/teachers/TeachersPage'
 import { ComingSoonPage } from '@/shared/ComingSoonPage'
 import { AppShell } from './layout/AppShell'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -23,7 +24,7 @@ export const router = createBrowserRouter([
           { path: '/branches', element: <BranchesPage /> },
           { path: '/staff', element: <StaffPage /> },
           { path: '/students', element: <StudentsPage /> },
-          { path: '/teachers', element: <ComingSoonPage title="Teachers" /> },
+          { path: '/teachers', element: <TeachersPage /> },
           { path: '/my-children', element: <ComingSoonPage title="My Children" /> },
           { path: '/courses', element: <ComingSoonPage title="Courses" /> },
           { path: '/curricula', element: <ComingSoonPage title="Curricula" /> },

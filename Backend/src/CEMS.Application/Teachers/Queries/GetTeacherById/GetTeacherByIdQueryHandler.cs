@@ -11,11 +11,13 @@ public class GetTeacherByIdQueryHandler : IRequestHandler<GetTeacherByIdQuery, T
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IIdentityService _identityService;
 
-    public GetTeacherByIdQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser)
+    public GetTeacherByIdQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser, IIdentityService identityService)
     {
         _context = context;
         _currentUser = currentUser;
+        _identityService = identityService;
     }
 
     public async Task<TeacherDto> Handle(GetTeacherByIdQuery request, CancellationToken cancellationToken)
@@ -38,6 +40,8 @@ public class GetTeacherByIdQueryHandler : IRequestHandler<GetTeacherByIdQuery, T
             throw new ForbiddenAccessException("You do not have access to this teacher.");
         }
 
-        return new TeacherDto(teacher.Id, teacher.UserId, teacher.HireDate, teacher.PayType, teacher.PayRate, branchIds);
+        var user = await _identityService.GetAuthenticatedUserAsync(teacher.UserId);
+
+        return new TeacherDto(teacher.Id, teacher.UserId, user.FullName, user.Email, teacher.HireDate, teacher.PayType, teacher.PayRate, branchIds);
     }
 }

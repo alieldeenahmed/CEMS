@@ -10,11 +10,13 @@ public class GetMyTeacherProfileQueryHandler : IRequestHandler<GetMyTeacherProfi
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IIdentityService _identityService;
 
-    public GetMyTeacherProfileQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser)
+    public GetMyTeacherProfileQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser, IIdentityService identityService)
     {
         _context = context;
         _currentUser = currentUser;
+        _identityService = identityService;
     }
 
     public async Task<TeacherDto> Handle(GetMyTeacherProfileQuery request, CancellationToken cancellationToken)
@@ -27,6 +29,8 @@ public class GetMyTeacherProfileQueryHandler : IRequestHandler<GetMyTeacherProfi
             .Select(tb => tb.BranchId)
             .ToListAsync(cancellationToken);
 
-        return new TeacherDto(teacher.Id, teacher.UserId, teacher.HireDate, teacher.PayType, teacher.PayRate, branchIds);
+        var user = await _identityService.GetAuthenticatedUserAsync(teacher.UserId);
+
+        return new TeacherDto(teacher.Id, teacher.UserId, user.FullName, user.Email, teacher.HireDate, teacher.PayType, teacher.PayRate, branchIds);
     }
 }

@@ -10,11 +10,13 @@ public class GetTeachersQueryHandler : IRequestHandler<GetTeachersQuery, List<Te
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IIdentityService _identityService;
 
-    public GetTeachersQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser)
+    public GetTeachersQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser, IIdentityService identityService)
     {
         _context = context;
         _currentUser = currentUser;
+        _identityService = identityService;
     }
 
     public async Task<List<TeacherDto>> Handle(GetTeachersQuery request, CancellationToken cancellationToken)
@@ -27,9 +29,26 @@ public class GetTeachersQueryHandler : IRequestHandler<GetTeachersQuery, List<Te
             query = query.Where(t => t.TeacherBranches.Any(tb => branchIds.Contains(tb.BranchId)));
         }
 
-        return await query
+        var teachers = await query
             .OrderBy(t => t.HireDate)
-            .Select(t => new TeacherDto(t.Id, t.UserId, t.HireDate, t.PayType, t.PayRate, t.TeacherBranches.Select(tb => tb.BranchId).ToList()))
+            .Select(t => new
+            {
+                t.Id,
+                t.UserId,
+                t.HireDate,
+                t.PayType,
+                t.PayRate,
+                BranchIds = t.TeacherBranches.Select(tb => tb.BranchId).ToList()
+            })
             .ToListAsync(cancellationToken);
+
+        var result = new List<TeacherDto>();
+        foreach (var teacher in teachers)
+        {
+            var user = await _identityService.GetAuthenticatedUserAsync(teacher.UserId);
+            result.Add(new TeacherDto(teacher.Id, teacher.UserId, user.FullName, user.Email, teacher.HireDate, teacher.PayType, teacher.PayRate, teacher.BranchIds));
+        }
+
+        return result;
     }
 }

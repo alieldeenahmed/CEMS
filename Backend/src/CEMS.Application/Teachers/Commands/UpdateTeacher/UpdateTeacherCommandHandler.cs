@@ -9,10 +9,12 @@ namespace CEMS.Application.Teachers.Commands.UpdateTeacher;
 public class UpdateTeacherCommandHandler : IRequestHandler<UpdateTeacherCommand, TeacherDto>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IIdentityService _identityService;
 
-    public UpdateTeacherCommandHandler(IApplicationDbContext context)
+    public UpdateTeacherCommandHandler(IApplicationDbContext context, IIdentityService identityService)
     {
         _context = context;
+        _identityService = identityService;
     }
 
     public async Task<TeacherDto> Handle(UpdateTeacherCommand request, CancellationToken cancellationToken)
@@ -31,6 +33,8 @@ public class UpdateTeacherCommandHandler : IRequestHandler<UpdateTeacherCommand,
             .Select(tb => tb.BranchId)
             .ToListAsync(cancellationToken);
 
-        return new TeacherDto(teacher.Id, teacher.UserId, teacher.HireDate, teacher.PayType, teacher.PayRate, branchIds);
+        var user = await _identityService.GetAuthenticatedUserAsync(teacher.UserId);
+
+        return new TeacherDto(teacher.Id, teacher.UserId, user.FullName, user.Email, teacher.HireDate, teacher.PayType, teacher.PayRate, branchIds);
     }
 }
