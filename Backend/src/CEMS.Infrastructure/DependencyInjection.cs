@@ -1,3 +1,4 @@
+using CEMS.Application.Analytics;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Application.Exams;
 using CEMS.Infrastructure.Auth;
@@ -44,6 +45,7 @@ public static class DependencyInjection
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddSingleton<IReportCardGenerator, QuestPdfReportCardGenerator>();
+        services.AddSingleton<IDashboardReportGenerator, DashboardReportGenerator>();
 
         return services;
     }

@@ -15,7 +15,8 @@ over HTTP.
 - ASP.NET Identity + JWT authentication
 - Clean Architecture: `Domain` → `Application` → `Infrastructure` → `Api`
 - MediatR (CQRS), FluentValidation, AutoMapper
-- QuestPDF (report card PDF generation)
+- QuestPDF (report card / dashboard PDF generation)
+- ClosedXML (dashboard Excel export)
 
 **Frontend** (`Frontend/`) — not started yet
 - React + Vite + TypeScript
@@ -180,8 +181,21 @@ via `POST /api/users/staff`.
       itself — except a teacher can view their own runs, self-service like
       `my-profile`/`my-schedule`. Guards against generating two runs with
       overlapping periods for the same teacher.
-- [ ] Frontend scaffold
-- [ ] Remaining module: Analytics Dashboard
+- [x] Analytics Dashboard: pure read/aggregation layer, no new entities —
+      cross-branch revenue (invoiced/collected/outstanding), teacher
+      utilization (scheduled vs. available hours, availability approximated
+      as weekly-pattern × number of weeks in the period), attendance trends
+      (rate over stored records — "Unmarked" is only ever a computed
+      roster-view default, never a stored row, so it's deliberately left
+      out of trends), and an enrollment funnel (total → any enrollment →
+      active enrollment). Owner queries org-wide or any branch;
+      BranchManager must supply their own branch (`BranchId` is required,
+      not optional, for non-Owner — omitting it does not fall back to an
+      implicit org-wide view). Exports to real PDF (QuestPDF) and Excel
+      (ClosedXML, genuinely MIT-licensed). All four metrics and both export
+      formats verified against live data with hand-checked arithmetic.
+- [ ] Frontend scaffold — **this is the last thing before the backend
+      (11/11 modules) is functionally complete**
 - [ ] Student branch transfer with history (`StudentBranchHistory`) —
       deliberately deferred until it's the thing being built, not bare CRUD
 - [ ] `TeacherSubject` (which subjects a teacher teaches) — still deferred;
