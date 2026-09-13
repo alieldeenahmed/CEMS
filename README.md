@@ -59,6 +59,14 @@ level — never just hidden in the UI.
   literal UTC day-of-week/time-of-day, with no branch-timezone handling.
   Fine for a single-timezone portfolio deployment; a real multi-region
   system would need each `Branch` to carry an IANA timezone.
+- CORS is config-driven, not hardcoded: `Cors:AllowedOrigins` in
+  `appsettings.json` (defaults to `http://localhost:5173`, Vite's dev port).
+  `AllowAnyHeader`/`AllowAnyMethod` but no `AllowCredentials` — the frontend
+  authenticates via a Bearer token in the `Authorization` header, not
+  cookies, so no cross-origin credential exposure is needed. Verified live:
+  a disallowed origin gets a 204 preflight response with no
+  `Access-Control-Allow-Origin` header at all (browser blocks it), while an
+  allowed origin gets the header echoed back correctly.
 
 ## Local setup
 
