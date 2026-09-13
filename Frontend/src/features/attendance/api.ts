@@ -13,6 +13,17 @@ export function useAttendanceForSession(sessionId: string | null) {
   })
 }
 
+export function useAttendanceForStudent(studentId: string | null) {
+  return useQuery({
+    queryKey: ['student-attendance', studentId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<AttendanceRecord[]>(`/students/${studentId}/attendance`)
+      return data
+    },
+    enabled: !!studentId,
+  })
+}
+
 export function useMarkAttendance(sessionId: string) {
   const queryClient = useQueryClient()
   return useMutation({

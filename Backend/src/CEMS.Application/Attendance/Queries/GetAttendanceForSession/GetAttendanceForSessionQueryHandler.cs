@@ -47,8 +47,8 @@ public class GetAttendanceForSessionQueryHandler : IRequestHandler<GetAttendance
 
         return enrolledStudents
             .Select(student => existingRecords.TryGetValue(student.StudentId, out var record)
-                ? new AttendanceRecordDto(record.Id, record.CourseSessionId, record.StudentId, student.FullName, record.Status, record.MarkedAtUtc, record.MarkedByUserId)
-                : new AttendanceRecordDto(null, request.SessionId, student.StudentId, student.FullName, AttendanceStatus.Unmarked, null, null))
+                ? new AttendanceRecordDto(record.Id, record.CourseSessionId, session.CourseId, session.Course.Name, session.StartUtc, record.StudentId, student.FullName, record.Status, record.MarkedAtUtc, record.MarkedByUserId)
+                : new AttendanceRecordDto(null, request.SessionId, session.CourseId, session.Course.Name, session.StartUtc, student.StudentId, student.FullName, AttendanceStatus.Unmarked, null, null))
             .ToList();
     }
 }

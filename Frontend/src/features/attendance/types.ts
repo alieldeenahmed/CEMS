@@ -3,6 +3,9 @@ export type AttendanceStatus = 'Unmarked' | 'Present' | 'Absent' | 'Late' | 'Exc
 export interface AttendanceRecord {
   id: string | null
   courseSessionId: string
+  courseId: string
+  courseName: string
+  sessionStartUtc: string
   studentId: string
   studentFullName: string
   status: AttendanceStatus

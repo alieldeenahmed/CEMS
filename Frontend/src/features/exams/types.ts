@@ -17,6 +17,9 @@ export interface Grade {
   examId: string
   examName: string
   examMaxScore: number
+  examDate: string
+  courseId: string
+  courseName: string
   studentId: string
   studentFullName: string
   score: number | null

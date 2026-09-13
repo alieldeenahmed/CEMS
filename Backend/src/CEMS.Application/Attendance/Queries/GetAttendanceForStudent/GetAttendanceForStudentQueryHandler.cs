@@ -23,17 +23,40 @@ public class GetAttendanceForStudentQueryHandler : IRequestHandler<GetAttendance
         var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == request.StudentId, cancellationToken)
             ?? throw new NotFoundException(nameof(Student), request.StudentId);
 
-        var hasAccess = _currentUser.IsInRole(RoleNames.Owner) || _currentUser.HasAccessToBranch(student.CurrentBranchId);
+        var isFullAccess = _currentUser.IsInRole(RoleNames.Owner) || _currentUser.HasAccessToBranch(student.CurrentBranchId);
 
-        if (!hasAccess)
+        var teacherCourseIds = _context.CourseSessions
+            .Where(s => s.Teacher.UserId == _currentUser.UserId)
+            .Select(s => s.CourseId);
+
+        var isTeachingStudent = _currentUser.IsInRole(RoleNames.Teacher)
+            && await _context.CourseEnrollments.AnyAsync(e => e.StudentId == request.StudentId && teacherCourseIds.Contains(e.CourseId), cancellationToken);
+
+        if (!isFullAccess && !isTeachingStudent)
         {
             throw new ForbiddenAccessException("You do not have access to this student.");
         }
 
-        return await _context.SessionAttendances
-            .Where(a => a.StudentId == request.StudentId)
+        var query = _context.SessionAttendances.Where(a => a.StudentId == request.StudentId);
+
+        if (!isFullAccess)
+        {
+            query = query.Where(a => teacherCourseIds.Contains(a.CourseSession.CourseId));
+        }
+
+        return await query
             .OrderByDescending(a => a.CourseSession.StartUtc)
-            .Select(a => new AttendanceRecordDto(a.Id, a.CourseSessionId, a.StudentId, student.FullName, a.Status, a.MarkedAtUtc, a.MarkedByUserId))
+            .Select(a => new AttendanceRecordDto(
+                a.Id,
+                a.CourseSessionId,
+                a.CourseSession.CourseId,
+                a.CourseSession.Course.Name,
+                a.CourseSession.StartUtc,
+                a.StudentId,
+                student.FullName,
+                a.Status,
+                a.MarkedAtUtc,
+                a.MarkedByUserId))
             .ToListAsync(cancellationToken);
     }
 }

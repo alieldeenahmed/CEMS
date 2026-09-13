@@ -11,6 +11,7 @@ import { PaymentsPage } from '@/features/payments/PaymentsPage'
 import { PayrollPage } from '@/features/payroll/PayrollPage'
 import { SchedulingPage } from '@/features/scheduling/SchedulingPage'
 import { StaffPage } from '@/features/staff/StaffPage'
+import { StudentDetailPage } from '@/features/students/StudentDetailPage'
 import { StudentsPage } from '@/features/students/StudentsPage'
 import { TeachersPage } from '@/features/teachers/TeachersPage'
 import { AppShell } from './layout/AppShell'
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
           { path: '/branches', element: <BranchesPage /> },
           { path: '/staff', element: <StaffPage /> },
           { path: '/students', element: <StudentsPage /> },
+          { path: '/students/:id', element: <StudentDetailPage /> },
           { path: '/teachers', element: <TeachersPage /> },
           { path: '/courses', element: <CoursesPage /> },
           { path: '/curricula', element: <CurriculaPage /> },

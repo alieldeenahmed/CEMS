@@ -56,6 +56,17 @@ export function useGradesForExam(examId: string | null) {
   })
 }
 
+export function useGradesForStudent(studentId: string | null) {
+  return useQuery({
+    queryKey: ['student-grades', studentId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<Grade[]>(`/students/${studentId}/grades`)
+      return data
+    },
+    enabled: !!studentId,
+  })
+}
+
 export function useRecordGrade(examId: string) {
   const queryClient = useQueryClient()
   return useMutation({

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { getErrorMessage } from '@/shared/api/errors'
 import { useAttendanceForSession, useMarkAttendance } from './api'
 import type { AttendanceStatus } from './types'
@@ -31,7 +32,9 @@ export function AttendanceGrid({ sessionId, canMark }: { sessionId: string; canM
           key={record.studentId}
           className={`flex items-center justify-between px-4 py-3 ${index > 0 ? 'border-t border-line' : ''}`}
         >
-          <p className="text-sm font-medium text-ink">{record.studentFullName}</p>
+          <Link to={`/students/${record.studentId}`} className="text-sm font-medium text-ink hover:text-navy hover:underline">
+            {record.studentFullName}
+          </Link>
 
           <select
             value={record.status}

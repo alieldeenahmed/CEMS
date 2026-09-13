@@ -73,6 +73,19 @@ public class RecordGradeCommandHandler : IRequestHandler<RecordGradeCommand, Gra
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new GradeDto(grade.Id, grade.ExamId, exam.Name, exam.MaxScore, grade.StudentId, studentFullName, grade.Score, grade.Comments, grade.GradedAtUtc, grade.GradedByUserId);
+        return new GradeDto(
+            grade.Id,
+            grade.ExamId,
+            exam.Name,
+            exam.MaxScore,
+            exam.ExamDate,
+            exam.CourseId,
+            exam.Course.Name,
+            grade.StudentId,
+            studentFullName,
+            grade.Score,
+            grade.Comments,
+            grade.GradedAtUtc,
+            grade.GradedByUserId);
     }
 }

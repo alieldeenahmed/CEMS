@@ -23,17 +23,43 @@ public class GetGradesForStudentQueryHandler : IRequestHandler<GetGradesForStude
         var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == request.StudentId, cancellationToken)
             ?? throw new NotFoundException(nameof(Student), request.StudentId);
 
-        var hasAccess = _currentUser.IsInRole(RoleNames.Owner) || _currentUser.HasAccessToBranch(student.CurrentBranchId);
+        var isFullAccess = _currentUser.IsInRole(RoleNames.Owner) || _currentUser.HasAccessToBranch(student.CurrentBranchId);
 
-        if (!hasAccess)
+        var teacherCourseIds = _context.CourseSessions
+            .Where(s => s.Teacher.UserId == _currentUser.UserId)
+            .Select(s => s.CourseId);
+
+        var isTeachingStudent = _currentUser.IsInRole(RoleNames.Teacher)
+            && await _context.CourseEnrollments.AnyAsync(e => e.StudentId == request.StudentId && teacherCourseIds.Contains(e.CourseId), cancellationToken);
+
+        if (!isFullAccess && !isTeachingStudent)
         {
             throw new ForbiddenAccessException("You do not have access to this student.");
         }
 
-        return await _context.Grades
-            .Where(g => g.StudentId == request.StudentId)
+        var query = _context.Grades.Where(g => g.StudentId == request.StudentId);
+
+        if (!isFullAccess)
+        {
+            query = query.Where(g => teacherCourseIds.Contains(g.Exam.CourseId));
+        }
+
+        return await query
             .OrderByDescending(g => g.Exam.ExamDate)
-            .Select(g => new GradeDto(g.Id, g.ExamId, g.Exam.Name, g.Exam.MaxScore, g.StudentId, student.FullName, g.Score, g.Comments, g.GradedAtUtc, g.GradedByUserId))
+            .Select(g => new GradeDto(
+                g.Id,
+                g.ExamId,
+                g.Exam.Name,
+                g.Exam.MaxScore,
+                g.Exam.ExamDate,
+                g.Exam.CourseId,
+                g.Exam.Course.Name,
+                g.StudentId,
+                student.FullName,
+                g.Score,
+                g.Comments,
+                g.GradedAtUtc,
+                g.GradedByUserId))
             .ToListAsync(cancellationToken);
     }
 }

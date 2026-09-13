@@ -25,6 +25,16 @@ public class GetStudentByIdQueryHandler : IRequestHandler<GetStudentByIdQuery, S
 
         var hasAccess = _currentUser.IsInRole(RoleNames.Owner) || _currentUser.HasAccessToBranch(student.CurrentBranchId);
 
+        if (!hasAccess && _currentUser.IsInRole(RoleNames.Teacher))
+        {
+            var teacherCourseIds = _context.CourseSessions
+                .Where(s => s.Teacher.UserId == _currentUser.UserId)
+                .Select(s => s.CourseId);
+
+            hasAccess = await _context.CourseEnrollments
+                .AnyAsync(e => e.StudentId == request.Id && teacherCourseIds.Contains(e.CourseId), cancellationToken);
+        }
+
         if (!hasAccess)
         {
             throw new ForbiddenAccessException("You do not have access to this student.");

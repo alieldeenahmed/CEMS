@@ -32,6 +32,7 @@ public class StudentsController : ControllerBase
 {
     private const string ViewRoles = RoleNames.Owner + "," + RoleNames.BranchManager + "," + RoleNames.FrontDesk;
     private const string ManageRoles = RoleNames.Owner + "," + RoleNames.BranchManager + "," + RoleNames.FrontDesk;
+    private const string StudentDetailViewRoles = RoleNames.Owner + "," + RoleNames.BranchManager + "," + RoleNames.FrontDesk + "," + RoleNames.Teacher;
 
     private readonly IMediator _mediator;
 
@@ -49,7 +50,7 @@ public class StudentsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = ViewRoles)]
+    [Authorize(Roles = StudentDetailViewRoles)]
     public async Task<ActionResult<StudentDto>> GetStudentById(Guid id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetStudentByIdQuery(id), cancellationToken);
@@ -107,7 +108,7 @@ public class StudentsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/enrollments")]
-    [Authorize(Roles = ViewRoles)]
+    [Authorize(Roles = StudentDetailViewRoles)]
     public async Task<ActionResult<List<CourseEnrollmentDto>>> GetEnrollmentsForStudent(Guid id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetEnrollmentsForStudentQuery(id), cancellationToken);
@@ -115,7 +116,7 @@ public class StudentsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/attendance")]
-    [Authorize(Roles = ViewRoles)]
+    [Authorize(Roles = StudentDetailViewRoles)]
     public async Task<ActionResult<List<AttendanceRecordDto>>> GetAttendanceForStudent(Guid id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetAttendanceForStudentQuery(id), cancellationToken);
@@ -123,7 +124,7 @@ public class StudentsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/grades")]
-    [Authorize(Roles = ViewRoles)]
+    [Authorize(Roles = StudentDetailViewRoles)]
     public async Task<ActionResult<List<GradeDto>>> GetGradesForStudent(Guid id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetGradesForStudentQuery(id), cancellationToken);

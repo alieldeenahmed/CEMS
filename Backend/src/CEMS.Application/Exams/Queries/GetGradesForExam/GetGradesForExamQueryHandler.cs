@@ -45,8 +45,8 @@ public class GetGradesForExamQueryHandler : IRequestHandler<GetGradesForExamQuer
 
         return enrolledStudents
             .Select(student => existingGrades.TryGetValue(student.StudentId, out var grade)
-                ? new GradeDto(grade.Id, grade.ExamId, exam.Name, exam.MaxScore, grade.StudentId, student.FullName, grade.Score, grade.Comments, grade.GradedAtUtc, grade.GradedByUserId)
-                : new GradeDto(null, request.ExamId, exam.Name, exam.MaxScore, student.StudentId, student.FullName, null, null, null, null))
+                ? new GradeDto(grade.Id, grade.ExamId, exam.Name, exam.MaxScore, exam.ExamDate, exam.CourseId, exam.Course.Name, grade.StudentId, student.FullName, grade.Score, grade.Comments, grade.GradedAtUtc, grade.GradedByUserId)
+                : new GradeDto(null, request.ExamId, exam.Name, exam.MaxScore, exam.ExamDate, exam.CourseId, exam.Course.Name, student.StudentId, student.FullName, null, null, null, null))
             .ToList();
     }
 }

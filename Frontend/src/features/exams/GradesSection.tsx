@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { useGradesForExam, useRecordGrade } from './api'
@@ -62,7 +63,9 @@ function GradeRow({
 
   return (
     <div className="flex items-center gap-2 rounded-md bg-paper px-3 py-2 text-sm">
-      <span className="flex-1 text-ink">{grade.studentFullName}</span>
+      <Link to={`/students/${grade.studentId}`} className="flex-1 text-ink hover:text-navy hover:underline">
+        {grade.studentFullName}
+      </Link>
 
       <input
         type="number"

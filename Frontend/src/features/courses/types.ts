@@ -25,6 +25,7 @@ export interface Enrollment {
   id: string
   studentId: string
   courseId: string
+  courseName: string
   enrollmentDate: string
   status: EnrollmentStatus
   position: number | null

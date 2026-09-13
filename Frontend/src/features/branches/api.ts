@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
 import type { Branch, BranchInput, Room, RoomInput } from './types'
 
-export function useBranches() {
+export function useBranches(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['branches'],
     queryFn: async () => {
       const { data } = await apiClient.get<Branch[]>('/branches')
       return data
     },
+    enabled: options?.enabled,
   })
 }
 

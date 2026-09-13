@@ -83,6 +83,6 @@ public class EnrollStudentCommandHandler : IRequestHandler<EnrollStudentCommand,
         _context.CourseEnrollments.Add(enrollment);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new CourseEnrollmentDto(enrollment.Id, enrollment.StudentId, enrollment.CourseId, enrollment.EnrollmentDate, enrollment.Status, enrollment.Position);
+        return new CourseEnrollmentDto(enrollment.Id, enrollment.StudentId, enrollment.CourseId, course.Name, enrollment.EnrollmentDate, enrollment.Status, enrollment.Position);
     }
 }

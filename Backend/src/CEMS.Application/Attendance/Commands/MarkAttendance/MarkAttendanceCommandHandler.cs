@@ -77,6 +77,16 @@ public class MarkAttendanceCommandHandler : IRequestHandler<MarkAttendanceComman
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new AttendanceRecordDto(attendance.Id, attendance.CourseSessionId, attendance.StudentId, studentFullName, attendance.Status, attendance.MarkedAtUtc, attendance.MarkedByUserId);
+        return new AttendanceRecordDto(
+            attendance.Id,
+            attendance.CourseSessionId,
+            session.CourseId,
+            session.Course.Name,
+            session.StartUtc,
+            attendance.StudentId,
+            studentFullName,
+            attendance.Status,
+            attendance.MarkedAtUtc,
+            attendance.MarkedByUserId);
     }
 }

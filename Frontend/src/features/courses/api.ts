@@ -65,6 +65,17 @@ export function useEnrollmentsForCourse(courseId: string | null) {
   })
 }
 
+export function useEnrollmentsForStudent(studentId: string | null) {
+  return useQuery({
+    queryKey: ['student-enrollments', studentId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<Enrollment[]>(`/students/${studentId}/enrollments`)
+      return data
+    },
+    enabled: !!studentId,
+  })
+}
+
 export function useEnrollStudent(courseId: string) {
   const queryClient = useQueryClient()
   return useMutation({

@@ -39,6 +39,6 @@ public class PromoteFromWaitlistCommandHandler : IRequestHandler<PromoteFromWait
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new CourseEnrollmentDto(enrollment.Id, enrollment.StudentId, enrollment.CourseId, enrollment.EnrollmentDate, enrollment.Status, enrollment.Position);
+        return new CourseEnrollmentDto(enrollment.Id, enrollment.StudentId, enrollment.CourseId, enrollment.Course.Name, enrollment.EnrollmentDate, enrollment.Status, enrollment.Position);
     }
 }

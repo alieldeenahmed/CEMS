@@ -19,6 +19,17 @@ export function useStudents() {
   })
 }
 
+export function useStudent(id: string | null) {
+  return useQuery({
+    queryKey: ['student', id],
+    queryFn: async () => {
+      const { data } = await apiClient.get<Student>(`/students/${id}`)
+      return data
+    },
+    enabled: !!id,
+  })
+}
+
 export function useCreateStudent() {
   const queryClient = useQueryClient()
   return useMutation({
