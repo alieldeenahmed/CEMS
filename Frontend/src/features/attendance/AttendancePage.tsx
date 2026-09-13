@@ -17,7 +17,8 @@ function CourseScopedPicker({ onSelect }: { onSelect: (sessionId: string) => voi
   const { data: sessions } = useSessionsForCourse(courseId || null)
 
   const branchNameById = new Map(branches?.map((b) => [b.id, b.name]))
-  const scheduledOrCompleted = sessions?.filter((s) => s.status !== 'Cancelled') ?? []
+  const now = new Date().toISOString()
+  const markableSessions = sessions?.filter((s) => s.status !== 'Cancelled' && s.startUtc <= now) ?? []
 
   return (
     <div className="mb-4 flex items-center gap-3">
@@ -35,7 +36,7 @@ function CourseScopedPicker({ onSelect }: { onSelect: (sessionId: string) => voi
         <div className="w-72">
           <Select onChange={(e) => onSelect(e.target.value)} defaultValue="">
             <option value="">Select a session...</option>
-            {scheduledOrCompleted.map((session) => (
+            {markableSessions.map((session) => (
               <option key={session.id} value={session.id}>
                 {formatUtcForDisplay(session.startUtc)} ({session.status})
               </option>
@@ -49,13 +50,14 @@ function CourseScopedPicker({ onSelect }: { onSelect: (sessionId: string) => voi
 
 function MySchedulePicker({ onSelect }: { onSelect: (sessionId: string) => void }) {
   const { data: sessions } = useMySchedule()
-  const scheduledOrCompleted = sessions?.filter((s) => s.status !== 'Cancelled') ?? []
+  const now = new Date().toISOString()
+  const markableSessions = sessions?.filter((s) => s.status !== 'Cancelled' && s.startUtc <= now) ?? []
 
   return (
     <div className="mb-4 w-72">
       <Select onChange={(e) => onSelect(e.target.value)} defaultValue="">
         <option value="">Select one of your sessions...</option>
-        {scheduledOrCompleted.map((session) => (
+        {markableSessions.map((session) => (
           <option key={session.id} value={session.id}>
             {formatUtcForDisplay(session.startUtc)} ({session.status})
           </option>

@@ -36,6 +36,11 @@ public class MarkAttendanceCommandHandler : IRequestHandler<MarkAttendanceComman
             throw new ForbiddenAccessException("You do not have access to mark attendance for this session.");
         }
 
+        if (session.StartUtc > DateTime.UtcNow)
+        {
+            throw new BadRequestException(new[] { "Cannot mark attendance for a session that hasn't started yet." });
+        }
+
         var studentFullName = await _context.CourseEnrollments
             .Where(e => e.StudentId == request.StudentId && e.CourseId == session.CourseId && e.Status == CourseEnrollmentStatus.Active)
             .Select(e => e.Student.FullName)
