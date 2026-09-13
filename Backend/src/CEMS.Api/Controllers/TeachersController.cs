@@ -15,6 +15,7 @@ using CEMS.Application.Scheduling.Queries.GetMySchedule;
 using CEMS.Application.Teachers.Queries.GetAvailabilityForTeacher;
 using CEMS.Application.Teachers.Queries.GetMyTeacherProfile;
 using CEMS.Application.Teachers.Queries.GetTeacherById;
+using CEMS.Application.Teachers.Queries.GetTeacherCandidates;
 using CEMS.Application.Teachers.Queries.GetTeachers;
 using CEMS.Domain.Teachers;
 using CEMS.Domain.Users;
@@ -71,8 +72,16 @@ public class TeachersController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("candidates")]
+    [Authorize(Roles = BranchManageRoles)]
+    public async Task<ActionResult<List<TeacherCandidateDto>>> GetTeacherCandidates(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetTeacherCandidatesQuery(), cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost]
-    [Authorize(Roles = RoleNames.Owner)]
+    [Authorize(Roles = BranchManageRoles)]
     public async Task<ActionResult<TeacherDto>> CreateTeacher(CreateTeacherCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);

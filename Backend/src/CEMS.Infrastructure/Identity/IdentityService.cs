@@ -78,6 +78,19 @@ public class IdentityService : IIdentityService
         return result;
     }
 
+    public async Task<List<AuthenticatedUser>> GetUsersInRoleAsync(string roleName)
+    {
+        var users = await _userManager.GetUsersInRoleAsync(roleName);
+
+        var result = new List<AuthenticatedUser>();
+        foreach (var user in users.OrderBy(u => u.FullName))
+        {
+            result.Add(await BuildAuthenticatedUserAsync(user));
+        }
+
+        return result;
+    }
+
     public async Task SetUserActiveAsync(Guid userId, bool isActive)
     {
         var user = await _userManager.FindByIdAsync(userId.ToString())

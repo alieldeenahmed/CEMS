@@ -13,6 +13,7 @@ import type { Teacher } from './types'
 export function TeachersPage() {
   const { hasRole } = useAuth()
   const isOwner = hasRole(ROLES.Owner)
+  const canCreateProfile = hasRole(ROLES.Owner, ROLES.BranchManager)
   const { data: teachers, isLoading, isError } = useTeachers()
   const deleteTeacher = useDeleteTeacher()
   const [expandedTeacherId, setExpandedTeacherId] = useState<string | null>(null)
@@ -30,7 +31,7 @@ export function TeachersPage() {
         title="Teachers"
         description="Teacher profiles, branch assignments, and availability."
         action={
-          isOwner ? (
+          canCreateProfile ? (
             <Button onClick={() => setModalState('create')}>
               <Plus size={15} />
               New teacher profile

@@ -1,12 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { useStaffUsers } from '@/features/staff/api'
 import { Button } from '@/shared/ui/Button'
 import { Input, Select } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
-import { useCreateTeacherProfile, useTeachers, useUpdateTeacher } from './api'
+import { useCreateTeacherProfile, useTeacherCandidates, useUpdateTeacher } from './api'
 import type { Teacher } from './types'
 
 const teacherSchema = z.object({
@@ -24,17 +23,10 @@ interface TeacherFormModalProps {
 }
 
 export function TeacherFormModal({ teacher, onClose }: TeacherFormModalProps) {
-  const { data: staff } = useStaffUsers()
-  const { data: teachers } = useTeachers()
+  const { data: candidates } = useTeacherCandidates()
   const createTeacherProfile = useCreateTeacherProfile()
   const updateTeacher = useUpdateTeacher()
   const [serverError, setServerError] = useState<string | null>(null)
-
-  const profiledUserIds = new Set(teachers?.map((t) => t.userId))
-  const availableTeacherStaff = useMemo(
-    () => staff?.filter((u) => u.roles.includes('Teacher') && !profiledUserIds.has(u.userId)) ?? [],
-    [staff, profiledUserIds],
-  )
 
   const {
     register,
@@ -83,7 +75,7 @@ export function TeacherFormModal({ teacher, onClose }: TeacherFormModalProps) {
         {!teacher && (
           <Select label="Staff account" {...register('userId')}>
             <option value="">Select a Teacher-role staff account</option>
-            {availableTeacherStaff.map((user) => (
+            {candidates?.map((user) => (
               <option key={user.userId} value={user.userId}>
                 {user.fullName} ({user.email})
               </option>

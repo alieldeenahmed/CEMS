@@ -10,6 +10,8 @@ public interface IIdentityService
 
     Task<List<AuthenticatedUser>> GetStaffUsersAsync();
 
+    Task<List<AuthenticatedUser>> GetUsersInRoleAsync(string roleName);
+
     Task SetUserActiveAsync(Guid userId, bool isActive);
 
     Task<bool> AnyUsersExistAsync();

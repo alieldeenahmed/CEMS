@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
 import type { CourseSession } from '@/features/scheduling/types'
-import type { AddAvailabilityInput, CreateTeacherInput, Teacher, TeacherAvailability, UpdateTeacherInput } from './types'
+import type {
+  AddAvailabilityInput,
+  CreateTeacherInput,
+  Teacher,
+  TeacherAvailability,
+  TeacherCandidate,
+  UpdateTeacherInput,
+} from './types'
 
 export function useMySchedule() {
   return useQuery({
@@ -23,6 +30,16 @@ export function useTeachers() {
   })
 }
 
+export function useTeacherCandidates() {
+  return useQuery({
+    queryKey: ['teacher-candidates'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<TeacherCandidate[]>('/teachers/candidates')
+      return data
+    },
+  })
+}
+
 export function useCreateTeacherProfile() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -30,7 +47,10 @@ export function useCreateTeacherProfile() {
       const { data } = await apiClient.post<Teacher>('/teachers', input)
       return data
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['teachers'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teachers'] })
+      queryClient.invalidateQueries({ queryKey: ['teacher-candidates'] })
+    },
   })
 }
 

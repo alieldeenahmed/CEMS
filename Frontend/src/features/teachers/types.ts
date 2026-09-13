@@ -23,6 +23,12 @@ export interface Teacher {
   branchIds: string[]
 }
 
+export interface TeacherCandidate {
+  userId: string
+  fullName: string
+  email: string
+}
+
 export interface CreateTeacherInput {
   userId: string
   hireDate: string
