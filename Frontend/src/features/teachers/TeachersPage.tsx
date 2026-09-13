@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { ROLES } from '@/features/auth/constants'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { SearchInput } from '@/shared/ui/SearchInput'
 import { AvailabilitySection } from './AvailabilitySection'
 import { useDeleteTeacher, useTeachers } from './api'
 import { BranchAssignmentsSection } from './BranchAssignmentsSection'
@@ -18,6 +19,12 @@ export function TeachersPage() {
   const deleteTeacher = useDeleteTeacher()
   const [expandedTeacherId, setExpandedTeacherId] = useState<string | null>(null)
   const [modalState, setModalState] = useState<'closed' | 'create' | Teacher>('closed')
+  const [search, setSearch] = useState('')
+
+  const query = search.trim().toLowerCase()
+  const filteredTeachers = teachers?.filter(
+    (teacher) => teacher.fullName.toLowerCase().includes(query) || teacher.email.toLowerCase().includes(query),
+  )
 
   function handleDelete(teacher: Teacher) {
     if (window.confirm(`Remove ${teacher.fullName}'s teacher profile? This cannot be undone.`)) {
@@ -40,12 +47,20 @@ export function TeachersPage() {
         }
       />
 
+      <SearchInput
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search by name or email..."
+        aria-label="Search teachers"
+        className="mb-4 max-w-sm"
+      />
+
       {isLoading && <p className="text-sm text-muted">Loading teachers...</p>}
       {isError && <p className="text-sm text-coral">Could not load teachers.</p>}
 
-      {teachers && (
+      {filteredTeachers && (
         <div className="overflow-hidden rounded-lg border border-line bg-paper">
-          {teachers.map((teacher, index) => {
+          {filteredTeachers.map((teacher, index) => {
             const isExpanded = expandedTeacherId === teacher.id
             return (
               <div key={teacher.id} className={index > 0 ? 'border-t border-line' : ''}>
@@ -102,8 +117,10 @@ export function TeachersPage() {
             )
           })}
 
-          {teachers.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-muted">No teacher profiles yet.</p>
+          {filteredTeachers.length === 0 && (
+            <p className="px-4 py-6 text-center text-sm text-muted">
+              {search ? 'No teachers match your search.' : 'No teacher profiles yet.'}
+            </p>
           )}
         </div>
       )}

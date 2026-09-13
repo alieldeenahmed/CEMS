@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useBranches } from '@/features/branches/api'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { SearchInput } from '@/shared/ui/SearchInput'
 import { useDeleteStudent, useStudents } from './api'
 import { GuardiansSection } from './GuardiansSection'
 import { StudentFormModal } from './StudentFormModal'
@@ -20,8 +21,11 @@ export function StudentsPage() {
   const deleteStudent = useDeleteStudent()
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null)
   const [modalState, setModalState] = useState<'closed' | 'create' | Student>('closed')
+  const [search, setSearch] = useState('')
 
   const branchNameById = new Map(branches?.map((branch) => [branch.id, branch.name]))
+  const query = search.trim().toLowerCase()
+  const filteredStudents = students?.filter((student) => student.fullName.toLowerCase().includes(query))
 
   function handleDelete(student: Student) {
     if (window.confirm(`Remove ${student.fullName}? This cannot be undone.`)) {
@@ -42,12 +46,20 @@ export function StudentsPage() {
         }
       />
 
+      <SearchInput
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search by name..."
+        aria-label="Search students"
+        className="mb-4 max-w-sm"
+      />
+
       {isLoading && <p className="text-sm text-muted">Loading students...</p>}
       {isError && <p className="text-sm text-coral">Could not load students.</p>}
 
-      {students && (
+      {filteredStudents && (
         <div className="overflow-hidden rounded-lg border border-line bg-paper">
-          {students.map((student, index) => {
+          {filteredStudents.map((student, index) => {
             const isExpanded = expandedStudentId === student.id
             return (
               <div key={student.id} className={index > 0 ? 'border-t border-line' : ''}>
@@ -99,8 +111,10 @@ export function StudentsPage() {
             )
           })}
 
-          {students.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-muted">No students yet.</p>
+          {filteredStudents.length === 0 && (
+            <p className="px-4 py-6 text-center text-sm text-muted">
+              {search ? 'No students match your search.' : 'No students yet.'}
+            </p>
           )}
         </div>
       )}

@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { ROLES } from '@/features/auth/constants'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { SearchInput } from '@/shared/ui/SearchInput'
 import { getErrorMessage } from '@/shared/api/errors'
 import { useCurricula, useDeleteCurriculum } from './api'
 import { CurriculumFormModal } from './CurriculumFormModal'
@@ -17,6 +18,13 @@ export function CurriculaPage() {
   const deleteCurriculum = useDeleteCurriculum()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [modalState, setModalState] = useState<'closed' | 'create' | Curriculum>('closed')
+  const [search, setSearch] = useState('')
+
+  const query = search.trim().toLowerCase()
+  const filteredCurricula = curricula?.filter(
+    (curriculum) =>
+      curriculum.name.toLowerCase().includes(query) || curriculum.description.toLowerCase().includes(query),
+  )
 
   function handleDelete(curriculum: Curriculum) {
     if (window.confirm(`Delete "${curriculum.name}"? This cannot be undone.`)) {
@@ -41,12 +49,20 @@ export function CurriculaPage() {
         }
       />
 
+      <SearchInput
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search by name or description..."
+        aria-label="Search curricula"
+        className="mb-4 max-w-sm"
+      />
+
       {isLoading && <p className="text-sm text-muted">Loading curricula...</p>}
       {isError && <p className="text-sm text-coral">Could not load curricula.</p>}
 
-      {curricula && (
+      {filteredCurricula && (
         <div className="overflow-hidden rounded-lg border border-line bg-paper">
-          {curricula.map((curriculum, index) => {
+          {filteredCurricula.map((curriculum, index) => {
             const isExpanded = expandedId === curriculum.id
             return (
               <div key={curriculum.id} className={index > 0 ? 'border-t border-line' : ''}>
@@ -92,8 +108,10 @@ export function CurriculaPage() {
             )
           })}
 
-          {curricula.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-muted">No curricula yet.</p>
+          {filteredCurricula.length === 0 && (
+            <p className="px-4 py-6 text-center text-sm text-muted">
+              {search ? 'No curricula match your search.' : 'No curricula yet.'}
+            </p>
           )}
         </div>
       )}

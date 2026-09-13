@@ -6,6 +6,7 @@ import { ROLES } from '@/features/auth/constants'
 import { useSubjects } from '@/features/curricula/api'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { SearchInput } from '@/shared/ui/SearchInput'
 import { getErrorMessage } from '@/shared/api/errors'
 import { useCourses, useDeleteCourse } from './api'
 import { CourseFormModal } from './CourseFormModal'
@@ -21,9 +22,12 @@ export function CoursesPage() {
   const deleteCourse = useDeleteCourse()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [modalState, setModalState] = useState<'closed' | 'create' | Course>('closed')
+  const [search, setSearch] = useState('')
 
   const branchNameById = new Map(branches?.map((b) => [b.id, b.name]))
   const subjectNameById = new Map(subjects?.map((s) => [s.id, s.name]))
+  const query = search.trim().toLowerCase()
+  const filteredCourses = courses?.filter((course) => course.name.toLowerCase().includes(query))
 
   function handleDelete(course: Course) {
     if (window.confirm(`Delete "${course.name}"? This cannot be undone.`)) {
@@ -48,12 +52,20 @@ export function CoursesPage() {
         }
       />
 
+      <SearchInput
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search by course name..."
+        aria-label="Search courses"
+        className="mb-4 max-w-sm"
+      />
+
       {isLoading && <p className="text-sm text-muted">Loading courses...</p>}
       {isError && <p className="text-sm text-coral">Could not load courses.</p>}
 
-      {courses && (
+      {filteredCourses && (
         <div className="overflow-hidden rounded-lg border border-line bg-paper">
-          {courses.map((course, index) => {
+          {filteredCourses.map((course, index) => {
             const isExpanded = expandedId === course.id
             return (
               <div key={course.id} className={index > 0 ? 'border-t border-line' : ''}>
@@ -106,8 +118,10 @@ export function CoursesPage() {
             )
           })}
 
-          {courses.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-muted">No courses yet.</p>
+          {filteredCourses.length === 0 && (
+            <p className="px-4 py-6 text-center text-sm text-muted">
+              {search ? 'No courses match your search.' : 'No courses yet.'}
+            </p>
           )}
         </div>
       )}

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useBranches } from '@/features/branches/api'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { SearchInput } from '@/shared/ui/SearchInput'
 import { useSetStaffUserActive, useStaffUsers } from './api'
 import { CreateStaffModal } from './CreateStaffModal'
 
@@ -18,8 +19,13 @@ export function StaffPage() {
   const { data: branches } = useBranches()
   const setActive = useSetStaffUserActive()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [search, setSearch] = useState('')
 
   const branchNameById = new Map(branches?.map((branch) => [branch.id, branch.name]))
+  const query = search.trim().toLowerCase()
+  const filteredStaff = staff?.filter(
+    (user) => user.fullName.toLowerCase().includes(query) || user.email.toLowerCase().includes(query),
+  )
 
   return (
     <div>
@@ -34,12 +40,20 @@ export function StaffPage() {
         }
       />
 
+      <SearchInput
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search by name or email..."
+        aria-label="Search staff"
+        className="mb-4 max-w-sm"
+      />
+
       {isLoading && <p className="text-sm text-muted">Loading staff...</p>}
       {isError && <p className="text-sm text-coral">Could not load staff accounts.</p>}
 
-      {staff && (
+      {filteredStaff && (
         <div className="overflow-hidden rounded-lg border border-line bg-paper">
-          {staff.map((user, index) => (
+          {filteredStaff.map((user, index) => (
             <div
               key={user.userId}
               className={`flex items-center gap-3 px-4 py-3 ${index > 0 ? 'border-t border-line' : ''}`}
@@ -83,8 +97,10 @@ export function StaffPage() {
             </div>
           ))}
 
-          {staff.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-muted">No staff accounts yet.</p>
+          {filteredStaff.length === 0 && (
+            <p className="px-4 py-6 text-center text-sm text-muted">
+              {search ? 'No staff accounts match your search.' : 'No staff accounts yet.'}
+            </p>
           )}
         </div>
       )}
