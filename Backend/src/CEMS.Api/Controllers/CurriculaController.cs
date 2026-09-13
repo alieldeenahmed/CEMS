@@ -15,6 +15,8 @@ namespace CEMS.Api.Controllers;
 [Route("api/curricula")]
 public class CurriculaController : ControllerBase
 {
+    private const string ManageRoles = RoleNames.Owner + "," + RoleNames.BranchManager;
+
     private readonly IMediator _mediator;
 
     public CurriculaController(IMediator mediator)
@@ -37,7 +39,7 @@ public class CurriculaController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = RoleNames.Owner)]
+    [Authorize(Roles = ManageRoles)]
     public async Task<ActionResult<CurriculumDto>> CreateCurriculum(CreateCurriculumCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
@@ -45,7 +47,7 @@ public class CurriculaController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = RoleNames.Owner)]
+    [Authorize(Roles = ManageRoles)]
     public async Task<ActionResult<CurriculumDto>> UpdateCurriculum(Guid id, UpdateCurriculumRequest request, CancellationToken cancellationToken)
     {
         var command = new UpdateCurriculumCommand(id, request.Name, request.Description);
@@ -54,7 +56,7 @@ public class CurriculaController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = RoleNames.Owner)]
+    [Authorize(Roles = ManageRoles)]
     public async Task<IActionResult> DeleteCurriculum(Guid id, CancellationToken cancellationToken)
     {
         await _mediator.Send(new DeleteCurriculumCommand(id), cancellationToken);

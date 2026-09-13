@@ -15,6 +15,8 @@ namespace CEMS.Api.Controllers;
 [Route("api/subjects")]
 public class SubjectsController : ControllerBase
 {
+    private const string ManageRoles = RoleNames.Owner + "," + RoleNames.BranchManager;
+
     private readonly IMediator _mediator;
 
     public SubjectsController(IMediator mediator)
@@ -37,7 +39,7 @@ public class SubjectsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = RoleNames.Owner)]
+    [Authorize(Roles = ManageRoles)]
     public async Task<ActionResult<SubjectDto>> CreateSubject(CreateSubjectCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
@@ -45,7 +47,7 @@ public class SubjectsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = RoleNames.Owner)]
+    [Authorize(Roles = ManageRoles)]
     public async Task<ActionResult<SubjectDto>> UpdateSubject(Guid id, UpdateSubjectRequest request, CancellationToken cancellationToken)
     {
         var command = new UpdateSubjectCommand(id, request.Name);
@@ -54,7 +56,7 @@ public class SubjectsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = RoleNames.Owner)]
+    [Authorize(Roles = ManageRoles)]
     public async Task<IActionResult> DeleteSubject(Guid id, CancellationToken cancellationToken)
     {
         await _mediator.Send(new DeleteSubjectCommand(id), cancellationToken);

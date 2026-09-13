@@ -12,7 +12,7 @@ import type { Curriculum } from './types'
 
 export function CurriculaPage() {
   const { hasRole } = useAuth()
-  const isOwner = hasRole(ROLES.Owner)
+  const canManage = hasRole(ROLES.Owner, ROLES.BranchManager)
   const { data: curricula, isLoading, isError } = useCurricula()
   const deleteCurriculum = useDeleteCurriculum()
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -32,7 +32,7 @@ export function CurriculaPage() {
         title="Curricula"
         description="Curricula and the subjects taught under each one."
         action={
-          isOwner ? (
+          canManage ? (
             <Button onClick={() => setModalState('create')}>
               <Plus size={15} />
               New curriculum
@@ -65,7 +65,7 @@ export function CurriculaPage() {
                     <p className="text-xs text-muted">{curriculum.description}</p>
                   </div>
 
-                  {isOwner && (
+                  {canManage && (
                     <>
                       <button
                         type="button"
