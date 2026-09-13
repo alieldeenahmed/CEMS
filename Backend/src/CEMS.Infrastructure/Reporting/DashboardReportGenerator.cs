@@ -67,7 +67,7 @@ public class DashboardReportGenerator : IDashboardReportGenerator
 
                                 foreach (var t in summary.TeacherUtilization)
                                 {
-                                    table.Cell().Text(t.TeacherId.ToString());
+                                    table.Cell().Text(t.TeacherFullName);
                                     table.Cell().Text(t.ScheduledHours.ToString("0.0"));
                                     table.Cell().Text(t.AvailableHours.ToString("0.0"));
                                     table.Cell().Text($"{t.UtilizationRate:P0}");
@@ -122,7 +122,7 @@ public class DashboardReportGenerator : IDashboardReportGenerator
         revenueSheet.Cell(4, 2).Value = summary.Revenue.TotalOutstanding;
 
         var utilizationSheet = workbook.Worksheets.Add("Teacher Utilization");
-        utilizationSheet.Cell(1, 1).Value = "TeacherId";
+        utilizationSheet.Cell(1, 1).Value = "Teacher";
         utilizationSheet.Cell(1, 2).Value = "Scheduled Hours";
         utilizationSheet.Cell(1, 3).Value = "Available Hours";
         utilizationSheet.Cell(1, 4).Value = "Utilization Rate";
@@ -130,7 +130,7 @@ public class DashboardReportGenerator : IDashboardReportGenerator
         {
             var t = summary.TeacherUtilization[i];
             var row = i + 2;
-            utilizationSheet.Cell(row, 1).Value = t.TeacherId.ToString();
+            utilizationSheet.Cell(row, 1).Value = t.TeacherFullName;
             utilizationSheet.Cell(row, 2).Value = t.ScheduledHours;
             utilizationSheet.Cell(row, 3).Value = t.AvailableHours;
             utilizationSheet.Cell(row, 4).Value = t.UtilizationRate;

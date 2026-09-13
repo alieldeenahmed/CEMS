@@ -9,11 +9,13 @@ public class GetTeacherUtilizationQueryHandler : IRequestHandler<GetTeacherUtili
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IIdentityService _identityService;
 
-    public GetTeacherUtilizationQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser)
+    public GetTeacherUtilizationQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser, IIdentityService identityService)
     {
         _context = context;
         _currentUser = currentUser;
+        _identityService = identityService;
     }
 
     public async Task<List<TeacherUtilizationDto>> Handle(GetTeacherUtilizationQuery request, CancellationToken cancellationToken)
@@ -52,12 +54,25 @@ public class GetTeacherUtilizationQueryHandler : IRequestHandler<GetTeacherUtili
             .GroupBy(s => s.TeacherId)
             .ToDictionary(g => g.Key, g => g.Sum(s => (s.EndUtc - s.StartUtc).TotalHours));
 
+        var teacherUserIds = await _context.Teachers
+            .Where(t => teacherIds.Contains(t.Id))
+            .Select(t => new { t.Id, t.UserId })
+            .ToListAsync(cancellationToken);
+
+        var fullNameByTeacher = new Dictionary<Guid, string>();
+        foreach (var teacher in teacherUserIds)
+        {
+            var user = await _identityService.GetAuthenticatedUserAsync(teacher.UserId);
+            fullNameByTeacher[teacher.Id] = user.FullName;
+        }
+
         return teacherIds.Select(teacherId =>
         {
             var available = weeklyHoursByTeacher.GetValueOrDefault(teacherId, 0) * numberOfWeeks;
             var scheduled = scheduledHoursByTeacher.GetValueOrDefault(teacherId, 0);
             var rate = available > 0 ? scheduled / available : 0;
-            return new TeacherUtilizationDto(teacherId, scheduled, available, rate);
+            var fullName = fullNameByTeacher.GetValueOrDefault(teacherId, "Unknown teacher");
+            return new TeacherUtilizationDto(teacherId, fullName, scheduled, available, rate);
         }).ToList();
     }
 }

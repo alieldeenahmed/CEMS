@@ -6,6 +6,7 @@ export interface RevenueSummary {
 
 export interface TeacherUtilization {
   teacherId: string
+  teacherFullName: string
   scheduledHours: number
   availableHours: number
   utilizationRate: number

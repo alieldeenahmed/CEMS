@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ROLES } from '@/features/auth/constants'
 import { useBranches } from '@/features/branches/api'
-import { useTeachers } from '@/features/teachers/api'
 import { Button } from '@/shared/ui/Button'
 import { Input, Select } from '@/shared/ui/Input'
 import { PageHeader } from '@/shared/ui/PageHeader'
@@ -24,7 +23,6 @@ export function AnalyticsPage() {
   const { user, hasRole } = useAuth()
   const isOwner = hasRole(ROLES.Owner)
   const { data: branches } = useBranches()
-  const { data: teachers } = useTeachers()
 
   const defaultRange = currentMonthRange()
   const [periodStart, setPeriodStart] = useState(defaultRange.periodStart)
@@ -35,7 +33,6 @@ export function AnalyticsPage() {
   const { data, isLoading, isError } = useAnalyticsDashboard(effectiveBranchId, periodStart, periodEnd)
 
   const branchNameById = new Map(branches?.map((b) => [b.id, b.name]))
-  const teacherNameById = new Map(teachers?.map((t) => [t.id, t.fullName]))
 
   return (
     <div>
@@ -173,9 +170,7 @@ export function AnalyticsPage() {
                 key={row.teacherId}
                 className={`flex items-center justify-between px-4 py-3 text-sm ${index > 0 ? 'border-t border-line' : ''}`}
               >
-                <span className="font-medium text-ink">
-                  {teacherNameById.get(row.teacherId) ?? 'Unknown teacher'}
-                </span>
+                <span className="font-medium text-ink">{row.teacherFullName}</span>
                 <span className="text-muted">
                   {row.scheduledHours}h / {row.availableHours}h ·{' '}
                   <span className="font-medium text-ink">{(row.utilizationRate * 100).toFixed(1)}%</span>
