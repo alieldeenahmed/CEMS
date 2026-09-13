@@ -117,6 +117,28 @@ SELECT "Id", '11111111-1111-1111-1111-111111111111' FROM "AspNetUsers" WHERE "Em
 account (BranchManager/Teacher/FrontDesk) can be created normally afterward
 via `POST /api/users/staff`.
 
+### Demo data
+
+`scripts/seed-demo-data.ps1` populates a fresh, empty `cems` database with a
+realistic dataset — 2 branches, staff at every role, teachers with
+availability, parents with linked students, enrollments, scheduled sessions,
+attendance, a graded exam, invoices in every payment state (paid/partial/
+overdue), and an approved payroll run. It's a script that calls the real
+running API end to end, not a raw SQL dump — every row passes through actual
+password hashing, RBAC, scheduling conflict checks, and payroll computation,
+the same way this whole backend has been verified throughout development.
+It is **not idempotent** — it's meant to run once against a clean database,
+not as a repeatable fixture loader.
+
+```powershell
+# 1. Start the API first (see above for env vars)
+dotnet run --project Backend/src/CEMS.Api
+# 2. In another terminal, from the repo root:
+./scripts/seed-demo-data.ps1
+```
+
+Prints every demo account's email at the end (all passwords: `DemoPass123`).
+
 ## Progress
 
 - [x] Backend solution scaffold (4 Clean Architecture projects)
