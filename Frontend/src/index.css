@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+/*
+ * CEMS design tokens — the single source of truth for the app's visual identity.
+ * Every page should use these Tailwind utilities (bg-navy, text-ochre, font-serif, etc.)
+ * instead of one-off inline styles, so the whole app stays visually consistent.
+ */
+@theme {
+  --color-ink: #17140f;
+  --color-navy: #1b2a4a;
+  --color-navy-deep: #122038;
+  --color-parchment: #f6f1e7;
+  --color-paper: #ffffff;
+  --color-line: #ddd6c7;
+  --color-ochre: #c99a2e;
+  --color-ochre-soft: #f0dfb4;
+  --color-teal: #3d6b5c;
+  --color-coral: #b5473a;
+  --color-muted: #7a7161;
+
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-serif: "Source Serif 4", Georgia, serif;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+#root {
+  min-height: 100vh;
+}
