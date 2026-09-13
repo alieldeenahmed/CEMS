@@ -67,6 +67,6 @@ public class CreateStaffUserCommandHandler : IRequestHandler<CreateStaffUserComm
 
         return new StaffUserDto(
             authenticatedUser.UserId, authenticatedUser.Email, authenticatedUser.FullName,
-            authenticatedUser.Roles, authenticatedUser.BranchIds);
+            authenticatedUser.Roles, authenticatedUser.BranchIds, authenticatedUser.IsActive);
     }
 }

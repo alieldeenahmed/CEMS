@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
 import { HomePage } from '@/features/dashboard/HomePage'
+import { StaffPage } from '@/features/staff/StaffPage'
 import { ComingSoonPage } from '@/shared/ComingSoonPage'
 import { AppShell } from './layout/AppShell'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -19,7 +20,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/', element: <HomePage /> },
           { path: '/branches', element: <BranchesPage /> },
-          { path: '/staff', element: <ComingSoonPage title="Staff" /> },
+          { path: '/staff', element: <StaffPage /> },
           { path: '/students', element: <ComingSoonPage title="Students" /> },
           { path: '/teachers', element: <ComingSoonPage title="Teachers" /> },
           { path: '/my-children', element: <ComingSoonPage title="My Children" /> },

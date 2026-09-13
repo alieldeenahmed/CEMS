@@ -1,4 +1,6 @@
+using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
+using CEMS.Domain.Users;
 using CEMS.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -62,6 +64,42 @@ public class IdentityService : IIdentityService
         return await BuildAuthenticatedUserAsync(user);
     }
 
+    public async Task<List<AuthenticatedUser>> GetStaffUsersAsync()
+    {
+        var staffRoleIds = await _context.Roles
+            .Where(r => r.Name != RoleNames.Parent)
+            .Select(r => r.Id)
+            .ToListAsync();
+
+        var staffUserIds = await _context.UserRoles
+            .Where(ur => staffRoleIds.Contains(ur.RoleId))
+            .Select(ur => ur.UserId)
+            .Distinct()
+            .ToListAsync();
+
+        var users = await _context.Users
+            .Where(u => staffUserIds.Contains(u.Id))
+            .OrderBy(u => u.FullName)
+            .ToListAsync();
+
+        var result = new List<AuthenticatedUser>();
+        foreach (var user in users)
+        {
+            result.Add(await BuildAuthenticatedUserAsync(user));
+        }
+
+        return result;
+    }
+
+    public async Task SetUserActiveAsync(Guid userId, bool isActive)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException(nameof(ApplicationUser), userId);
+
+        user.IsActive = isActive;
+        await _userManager.UpdateAsync(user);
+    }
+
     private async Task<AuthenticatedUser> BuildAuthenticatedUserAsync(ApplicationUser user)
     {
         var roles = await _userManager.GetRolesAsync(user);
@@ -70,6 +108,6 @@ public class IdentityService : IIdentityService
             .Select(a => a.BranchId)
             .ToListAsync();
 
-        return new AuthenticatedUser(user.Id, user.Email!, user.FullName, roles.ToList(), branchIds);
+        return new AuthenticatedUser(user.Id, user.Email!, user.FullName, roles.ToList(), branchIds, user.IsActive);
     }
 }
