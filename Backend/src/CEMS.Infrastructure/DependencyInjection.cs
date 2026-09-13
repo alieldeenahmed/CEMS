@@ -1,6 +1,7 @@
 using CEMS.Application.Analytics;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Application.Exams;
+using CEMS.Application.Payroll;
 using CEMS.Infrastructure.Auth;
 using CEMS.Infrastructure.Identity;
 using CEMS.Infrastructure.Persistence;
@@ -46,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddSingleton<IReportCardGenerator, QuestPdfReportCardGenerator>();
         services.AddSingleton<IDashboardReportGenerator, DashboardReportGenerator>();
+        services.AddSingleton<IPayStubGenerator, QuestPdfPayStubGenerator>();
 
         return services;
     }

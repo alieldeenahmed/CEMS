@@ -71,3 +71,15 @@ export function useLineItemsForPayrollRun(runId: string | null) {
     enabled: !!runId,
   })
 }
+
+export async function downloadPayStub(runId: string, periodStart: string, periodEnd: string) {
+  const response = await apiClient.get(`/payroll-runs/${runId}/paystub`, { responseType: 'blob' })
+  const url = URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `paystub-${periodStart}-to-${periodEnd}.pdf`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}

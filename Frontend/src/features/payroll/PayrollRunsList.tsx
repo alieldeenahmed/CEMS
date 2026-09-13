@@ -1,8 +1,8 @@
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Printer } from 'lucide-react'
 import { useState } from 'react'
 import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
-import { useApprovePayrollRun, useMarkPayrollRunPaid } from './api'
+import { downloadPayStub, useApprovePayrollRun, useMarkPayrollRunPaid } from './api'
 import { LineItemsSection } from './LineItemsSection'
 import type { PayrollRun } from './types'
 
@@ -49,6 +49,18 @@ export function PayrollRunsList({ runs, teacherId, canManage }: PayrollRunsListP
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLASSES[run.status]}`}>
                 {run.status}
               </span>
+
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  downloadPayStub(run.id, run.periodStart, run.periodEnd).catch(() =>
+                    window.alert('Could not download this pay stub.'),
+                  )
+                }
+              >
+                <Printer size={15} />
+                Pay stub
+              </Button>
 
               {canManage && run.status === 'Draft' && (
                 <Button

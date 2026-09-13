@@ -1,6 +1,7 @@
 using CEMS.Application.Payroll;
 using CEMS.Application.Payroll.Commands.ApprovePayrollRun;
 using CEMS.Application.Payroll.Commands.MarkPayrollRunPaid;
+using CEMS.Application.Payroll.Queries.GeneratePayStub;
 using CEMS.Application.Payroll.Queries.GetLineItemsForPayrollRun;
 using CEMS.Application.Payroll.Queries.GetPayrollRunById;
 using CEMS.Domain.Users;
@@ -37,6 +38,14 @@ public class PayrollRunsController : ControllerBase
     {
         var result = await _mediator.Send(new GetLineItemsForPayrollRunQuery(id), cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/paystub")]
+    [Authorize(Roles = ViewRoles)]
+    public async Task<IActionResult> GetPayStub(Guid id, CancellationToken cancellationToken)
+    {
+        var pdfBytes = await _mediator.Send(new GeneratePayStubQuery(id), cancellationToken);
+        return File(pdfBytes, "application/pdf", $"paystub-{id}.pdf");
     }
 
     [HttpPost("{id:guid}/approve")]
