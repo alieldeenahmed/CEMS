@@ -2,6 +2,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
 import type { CourseSession, CreateSessionInput } from './types'
 
+export function useSession(sessionId: string | null) {
+  return useQuery({
+    queryKey: ['session', sessionId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<CourseSession>(`/sessions/${sessionId}`)
+      return data
+    },
+    enabled: !!sessionId,
+  })
+}
+
 export function useSessionsForCourse(courseId: string | null) {
   return useQuery({
     queryKey: ['sessions', courseId],

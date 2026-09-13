@@ -1,7 +1,7 @@
 import { ClipboardCheck, GraduationCap, Receipt, Wallet } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ROLES } from '@/features/auth/constants'
-import { StatCard } from './StatCard'
+import { StatCard } from '@/shared/ui/StatCard'
 import { useDashboardSummary } from './useDashboardSummary'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })

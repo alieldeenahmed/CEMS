@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router-dom'
+import { AnalyticsPage } from '@/features/analytics/AnalyticsPage'
 import { AttendancePage } from '@/features/attendance/AttendancePage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
@@ -7,6 +8,7 @@ import { CoursesPage } from '@/features/courses/CoursesPage'
 import { CurriculaPage } from '@/features/curricula/CurriculaPage'
 import { ExamsPage } from '@/features/exams/ExamsPage'
 import { PaymentsPage } from '@/features/payments/PaymentsPage'
+import { PayrollPage } from '@/features/payroll/PayrollPage'
 import { SchedulingPage } from '@/features/scheduling/SchedulingPage'
 import { StaffPage } from '@/features/staff/StaffPage'
 import { StudentsPage } from '@/features/students/StudentsPage'
@@ -38,8 +40,8 @@ export const router = createBrowserRouter([
           { path: '/attendance', element: <AttendancePage /> },
           { path: '/exams', element: <ExamsPage /> },
           { path: '/payments', element: <PaymentsPage /> },
-          { path: '/payroll', element: <ComingSoonPage title="Payroll" /> },
-          { path: '/analytics', element: <ComingSoonPage title="Analytics" /> },
+          { path: '/payroll', element: <PayrollPage /> },
+          { path: '/analytics', element: <AnalyticsPage /> },
         ],
       },
     ],

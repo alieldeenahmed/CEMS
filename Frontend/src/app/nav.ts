@@ -109,7 +109,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Receipt,
         roles: [ROLES.Owner, ROLES.BranchManager, ROLES.FrontDesk, ROLES.Parent],
       },
-      { label: 'Payroll', path: '/payroll', icon: Wallet, roles: [ROLES.Owner] },
+      { label: 'Payroll', path: '/payroll', icon: Wallet, roles: [ROLES.Owner, ROLES.Teacher] },
       {
         label: 'Analytics',
         path: '/analytics',
