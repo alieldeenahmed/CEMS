@@ -14,15 +14,16 @@ over HTTP.
 - EF Core + PostgreSQL (Npgsql provider)
 - ASP.NET Identity + JWT authentication
 - Clean Architecture: `Domain` → `Application` → `Infrastructure` → `Api`
-- MediatR (CQRS), FluentValidation, AutoMapper
+- MediatR (CQRS), FluentValidation
 - QuestPDF (report card / dashboard PDF generation)
 - ClosedXML (dashboard Excel export)
 
-**Frontend** (`Frontend/`) — not started yet
-- React + Vite + TypeScript
-- Tailwind CSS + shadcn/ui
+**Frontend** (`Frontend/`)
+- React 19 + Vite + TypeScript
+- Tailwind CSS v4 + hand-built primitives in `shared/ui/` (no component
+  library — Button, Input, Select, Modal, PageHeader, StatCard, SearchInput)
 - React Hook Form + Zod
-- TanStack Query + Context for auth
+- TanStack Query + Context for auth, axios client, React Router
 
 ## Roles
 
@@ -51,7 +52,7 @@ level — never just hidden in the UI.
 - `Application` is organized into feature folders that mirror the domain
   modules (Branches, Users, Students, Teachers, Courses, Scheduling,
   Attendance, Exams, Payments, Payroll, Analytics). The frontend's
-  `features/` folders will mirror the same breakdown 1:1.
+  `features/` folders mirror the same breakdown 1:1.
 - All `DateTime` values in the model represent UTC instants (`CourseSession`
   start/end). `ApplicationDbContext` applies a global value converter that
   forces `DateTimeKind.Utc` on every `DateTime` property — Npgsql rejects
@@ -210,16 +211,26 @@ Prints every demo account's email at the end (all passwords: `DemoPass123`).
       Dedicated outstanding-balance endpoint sums unpaid amounts across all
       non-cancelled invoices for a student.
 - [x] Payroll: `PayrollRun` (Draft→Approved→Paid) auto-computed from every
-      non-cancelled `CourseSession` in the period, priced by `PayType`
-      (Hourly × duration, or flat PerSession) — a center-cancelled session
-      isn't paid, but its linked makeup session is a normal session and is
-      paid like any other, per the earlier no-show-vs-cancellation
-      decision. `PayrollLineItem` traces each session's contribution.
-      Entirely Owner-only (generation, approval, payout) since it reveals
-      actual computed compensation, same sensitivity level as `PayRate`
-      itself — except a teacher can view their own runs, self-service like
+      non-cancelled `CourseSession` in the period for Hourly (rate ×
+      duration) or PerSession (flat per session) teachers — a
+      center-cancelled session isn't paid, but its linked makeup session is
+      a normal session and is paid like any other, per the earlier
+      no-show-vs-cancellation decision. `PayrollLineItem` traces each
+      session's contribution. Two more `PayType`s compute without any
+      session loop at all, so they carry no line items: Fixed pays a flat
+      `PayRate` for the whole period regardless of sessions held; Percentage
+      pays `PayRate`% of whatever `Payment`s were actually recorded, in that
+      period, against packages on courses the teacher teaches (not of
+      sessions, and not of invoiced-but-uncollected amounts) — `PayRate` is
+      validated ≤100 only when `PayType` is Percentage. Generation is
+      Owner-only, same sensitivity level as `PayRate` itself, except a
+      teacher can view their own runs self-service, like
       `my-profile`/`my-schedule`. Guards against generating two runs with
-      overlapping periods for the same teacher.
+      overlapping periods for the same teacher. A parallel `StaffPayrollRun`
+      model gives FrontDesk/BranchManager a flat, manually-entered (and
+      Owner-editable while still Draft) payroll amount — they have no
+      sessions to compute from. Every payroll run, teacher or staff, can be
+      printed as a real PDF pay stub (`IPayStubGenerator`, QuestPDF).
 - [x] Analytics Dashboard: pure read/aggregation layer, no new entities —
       cross-branch revenue (invoiced/collected/outstanding), teacher
       utilization (scheduled vs. available hours, availability approximated
@@ -233,9 +244,82 @@ Prints every demo account's email at the end (all passwords: `DemoPass123`).
       implicit org-wide view). Exports to real PDF (QuestPDF) and Excel
       (ClosedXML, genuinely MIT-licensed). All four metrics and both export
       formats verified against live data with hand-checked arithmetic.
-- [ ] Frontend scaffold — **this is the last thing before the backend
-      (11/11 modules) is functionally complete**
+- [x] Frontend: a page per backend module (Dashboard, Branches, Staff,
+      Students, Teachers, Courses, Curricula, Scheduling, Attendance, Exams
+      & Grades, Payments, Payroll, Analytics), all backed by the same
+      branch-scoped RBAC as the API — a role that can't call an endpoint
+      simply doesn't see the button/page for it, but the real enforcement is
+      always server-side. Dashboard home is role-personalized (Owner sees
+      org-wide widgets; FrontDesk/Teacher get their own relevant overview,
+      stacked if a user holds more than one role). Students, Teachers,
+      Courses, Curricula, and Staff all have a client-side search bar.
+      Clicking a student opens a dedicated detail page (enrollments,
+      attendance, grades, and — Owner/BranchManager/FrontDesk only —
+      guardians); a Teacher can open it too, but only for a student they
+      actually teach, and only sees the slice of that history from their
+      own courses, enforced in the query handler, not just the UI. A new
+      student can't be created without a guardian attached at creation time
+      (existing or new, atomic with the student row) — front desk used to
+      be able to add one with no contact on file at all.
 - [ ] Student branch transfer with history (`StudentBranchHistory`) —
       deliberately deferred until it's the thing being built, not bare CRUD
 - [ ] `TeacherSubject` (which subjects a teacher teaches) — still deferred;
       no module has needed it yet
+
+## Production readiness
+
+This is architecturally sound for **one real educational center** (staff-run,
+no self-service parent/student portal) — the RBAC scoping and business-rule
+enforcement described above are real, not portfolio theater. It is **not**
+ready to hand to a real center as-is. Checked, not guessed — concrete gaps,
+in priority order:
+
+**Would break in week one:**
+- No password reset, anywhere. `AuthController` only has `login` and
+  `bootstrap-owner` — no self-service reset, no admin-assisted reset. A
+  locked-out staff member currently needs a direct database edit.
+- JWT access tokens expire after 60 minutes (`Jwt:ExpiryMinutes`) with no
+  refresh token. Front desk gets silently logged out mid-shift, repeatedly.
+- Zero automated tests, backend or frontend. Every behavior described in
+  this README was verified by hand (curl + browser) during development —
+  fine while building, not a safe way to change code once real data is in
+  it.
+- No backup/disaster-recovery story — it's whatever Postgres instance you
+  point `ConnectionStrings__Default` at, with no documented restore path.
+
+**Needed soon, not day-one:**
+- No email at all — no password-reset mail, no invoice-due reminders,
+  nothing. Front-desk staff will expect this quickly.
+- Single-timezone only (see "Architecture notes" above) — fine for one
+  region, breaks the moment a branch is elsewhere.
+- Secrets (connection string, JWT signing key) are user-scoped environment
+  variables — fine for local dev, not for a real deployment; needs a real
+  secrets manager.
+- `AutoMapper` is referenced in `CEMS.Application.csproj` but not used
+  anywhere — every DTO is hand-constructed. Dead dependency, safe to drop.
+
+**Can wait:** CI/CD, Docker packaging, and the two items already deferred
+above (`StudentBranchHistory`, `TeacherSubject`).
+
+Turning this into a real multi-tenant product (selling to many *unrelated*
+centers, not just one center with several branches) would be a materially
+bigger redesign — a separate `Organization`/tenant concept, per-tenant data
+isolation, billing — not assumed here.
+
+## Hosting
+
+Not yet deployed anywhere; no Dockerfile, no CI/CD workflow, no hosting
+config committed. For this stack (ASP.NET Core 9 API + PostgreSQL +
+Vite/React SPA), the intended path is:
+
+- **Database**: [Neon](https://neon.tech) (managed Postgres) — backups and
+  patching stop being something to think about, generous free tier.
+- **API**: Railway or Azure App Service (Linux). Railway is the faster,
+  cheaper path to a first real deployment; Azure App Service is the more
+  natural fit if this should also read as an Azure-flavored .NET deployment.
+- **Frontend**: the Vite static build (`npm run build`) to Vercel or
+  Netlify — trivial either way.
+
+Docker packaging and a basic CI workflow (build + the tests that don't yet
+exist) should land before a real center is using this, since every
+deployment right now would be a manual one.
