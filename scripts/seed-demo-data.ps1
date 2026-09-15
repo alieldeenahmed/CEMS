@@ -10,6 +10,10 @@
     running it twice will fail on duplicate emails/branches. That's intentional: this is a demo
     seeder for a clean environment, not a repeatable fixture loader.
 
+    The dataset models a small coding school ("CodeCamp") running two branches in Alexandria,
+    Egypt -- Smouha and Kafr Abdo -- teaching programming courses from block-based basics for
+    kids through Python and full-stack web development for teens and adults.
+
     Prerequisites:
       - The API must already be running (dotnet run --project Backend/src/CEMS.Api)
       - ConnectionStrings__Default and Jwt__Key must already be set (see README.md "Local setup")
@@ -52,19 +56,19 @@ function Get-NextWeekday {
     return $today.AddDays($daysUntil + ($WeeksAhead * 7))
 }
 
-Write-Host "=== CEMS demo data seeder ===" -ForegroundColor Cyan
+Write-Host "=== CEMS demo data seeder: CodeCamp (Alexandria) ===" -ForegroundColor Cyan
 
 # --- 1. Bootstrap the Owner account -----------------------------------------------------------
 Write-Host "`n[1/12] Bootstrapping Owner account..." -ForegroundColor Yellow
 
-$ownerEmail = "owner@cems.demo"
+$ownerEmail = "owner@codecamp.demo"
 $ownerPassword = "DemoPass123"
 
 # Every other account-creation path requires an authenticated Owner/staff token, so the very first
 # account has to come from somewhere else. bootstrap-owner is anonymous but self-disables the
 # instant any user exists (see BootstrapOwnerCommandHandler) -- it can't be used as a signup path.
 $ownerToken = (Invoke-Api POST "/api/auth/bootstrap-owner" $null @{
-    email = $ownerEmail; password = $ownerPassword; fullName = "Dana Owner"; phoneNumber = "0100000001"
+    email = $ownerEmail; password = $ownerPassword; fullName = "Mostafa El-Sayed"; phoneNumber = "01012340001"
 }).token
 
 Write-Host "  Owner ready: $ownerEmail / $ownerPassword"
@@ -72,52 +76,59 @@ Write-Host "  Owner ready: $ownerEmail / $ownerPassword"
 # --- 2. Branches and rooms ---------------------------------------------------------------------
 Write-Host "`n[2/12] Creating branches and rooms..." -ForegroundColor Yellow
 
-$downtown = Invoke-Api POST "/api/branches" $ownerToken @{ name = "Downtown Center"; address = "1 Main St"; phone = "0200000001" }
-$uptown = Invoke-Api POST "/api/branches" $ownerToken @{ name = "Uptown Center"; address = "99 High St"; phone = "0200000002" }
+$smouha = Invoke-Api POST "/api/branches" $ownerToken @{ name = "CodeCamp Smouha"; address = "14 Fawzy Moaz St, Smouha, Alexandria"; phone = "034567001" }
+$kafrAbdo = Invoke-Api POST "/api/branches" $ownerToken @{ name = "CodeCamp Kafr Abdo"; address = "9 Abdel Salam Aref St, Kafr Abdo, Alexandria"; phone = "034567002" }
 
-$downtownRoomA = Invoke-Api POST "/api/branches/$($downtown.id)/rooms" $ownerToken @{ name = "Room A"; capacity = 15 }
-$downtownRoomB = Invoke-Api POST "/api/branches/$($downtown.id)/rooms" $ownerToken @{ name = "Room B"; capacity = 1 }
-$uptownRoomA = Invoke-Api POST "/api/branches/$($uptown.id)/rooms" $ownerToken @{ name = "Room A"; capacity = 15 }
+$smouhaRoomA = Invoke-Api POST "/api/branches/$($smouha.id)/rooms" $ownerToken @{ name = "Lab 1"; capacity = 15 }
+$smouhaLab2 = Invoke-Api POST "/api/branches/$($smouha.id)/rooms" $ownerToken @{ name = "Lab 2 (1:1)"; capacity = 1 }
+$kafrAbdoRoomA = Invoke-Api POST "/api/branches/$($kafrAbdo.id)/rooms" $ownerToken @{ name = "Lab 1"; capacity = 15 }
 
-Write-Host "  Downtown Center ($($downtown.id)), Uptown Center ($($uptown.id))"
+Write-Host "  CodeCamp Smouha ($($smouha.id)), CodeCamp Kafr Abdo ($($kafrAbdo.id))"
 
-# --- 3. Curriculum, courses, packages ----------------------------------------------------------
-Write-Host "`n[3/12] Creating curriculum, courses, and packages..." -ForegroundColor Yellow
+# --- 3. Curricula, courses, packages ------------------------------------------------------------
+Write-Host "`n[3/12] Creating curricula, courses, and packages..." -ForegroundColor Yellow
 
-$curriculum = Invoke-Api POST "/api/curricula" $ownerToken @{ name = "IG"; description = "International General Certificate" }
+$juniorCoding = Invoke-Api POST "/api/curricula" $ownerToken @{ name = "Junior Coding"; description = "Foundational programming and computational thinking for ages 8-14, taught through block-based tools before moving to text-based code." }
+$webAndSoftware = Invoke-Api POST "/api/curricula" $ownerToken @{ name = "Web & Software Development"; description = "Applied programming tracks in Python, JavaScript, and full-stack web development for teens and adults." }
 
-$mathCourseDowntown = Invoke-Api POST "/api/courses" $ownerToken @{ name = "IG Mathematics - Group A"; deliveryMode = "Group"; curriculumId = $curriculum.id; branchId = $downtown.id }
-$physicsCourseDowntown = Invoke-Api POST "/api/courses" $ownerToken @{ name = "IG Physics - 1:1"; deliveryMode = "OneOnOne"; curriculumId = $curriculum.id; branchId = $downtown.id }
-$mathCourseUptown = Invoke-Api POST "/api/courses" $ownerToken @{ name = "IG Mathematics - Group A"; deliveryMode = "Group"; curriculumId = $curriculum.id; branchId = $uptown.id }
+$pythonCourseSmouha = Invoke-Api POST "/api/courses" $ownerToken @{ name = "Python Fundamentals - Group A"; deliveryMode = "Group"; curriculumId = $webAndSoftware.id; branchId = $smouha.id }
+$webDevCourseSmouha = Invoke-Api POST "/api/courses" $ownerToken @{ name = "Web Development with JavaScript - 1:1"; deliveryMode = "OneOnOne"; curriculumId = $webAndSoftware.id; branchId = $smouha.id }
+$scratchCourseKafrAbdo = Invoke-Api POST "/api/courses" $ownerToken @{ name = "Scratch Programming - Group A"; deliveryMode = "Group"; curriculumId = $juniorCoding.id; branchId = $kafrAbdo.id }
 
-$mathPackageDowntown = Invoke-Api POST "/api/courses/$($mathCourseDowntown.id)/packages" $ownerToken @{ sessionCount = 12; price = 600 }
-$physicsPackageDowntown = Invoke-Api POST "/api/courses/$($physicsCourseDowntown.id)/packages" $ownerToken @{ sessionCount = 12; price = 900 }
+$pythonPackageSmouha = Invoke-Api POST "/api/courses/$($pythonCourseSmouha.id)/packages" $ownerToken @{ sessionCount = 12; price = 2400 }
+$webDevPackageSmouha = Invoke-Api POST "/api/courses/$($webDevCourseSmouha.id)/packages" $ownerToken @{ sessionCount = 12; price = 3600 }
 
-Write-Host "  Curriculum '$($curriculum.name)' with 3 courses, 2 packages"
+Write-Host "  2 curricula ('Junior Coding', 'Web & Software Development'), 3 courses, 2 packages"
 
 # --- 4. Staff accounts -------------------------------------------------------------------------
 Write-Host "`n[4/12] Creating staff accounts..." -ForegroundColor Yellow
 
-$bmDowntown = Invoke-Api POST "/api/users/staff" $ownerToken @{ email = "bm.downtown@cems.demo"; password = "DemoPass123"; fullName = "Blair Manager"; phoneNumber = "0300000001"; role = "BranchManager"; branchId = $downtown.id }
-$bmUptown = Invoke-Api POST "/api/users/staff" $ownerToken @{ email = "bm.uptown@cems.demo"; password = "DemoPass123"; fullName = "Uma Manager"; phoneNumber = "0300000002"; role = "BranchManager"; branchId = $uptown.id }
-$fdDowntown = Invoke-Api POST "/api/users/staff" $ownerToken @{ email = "fd.downtown@cems.demo"; password = "DemoPass123"; fullName = "Frankie Desk"; phoneNumber = "0300000003"; role = "FrontDesk"; branchId = $downtown.id }
-$teacherUserDowntown = Invoke-Api POST "/api/users/staff" $ownerToken @{ email = "teacher.downtown@cems.demo"; password = "DemoPass123"; fullName = "Tara Teacher"; phoneNumber = "0300000004"; role = "Teacher"; branchId = $null }
-$teacherUserUptown = Invoke-Api POST "/api/users/staff" $ownerToken @{ email = "teacher.uptown@cems.demo"; password = "DemoPass123"; fullName = "Tom Teacher"; phoneNumber = "0300000005"; role = "Teacher"; branchId = $null }
+$bmSmouha = Invoke-Api POST "/api/users/staff" $ownerToken @{ email = "bm.smouha@codecamp.demo"; password = "DemoPass123"; fullName = "Nourhan Adel"; phoneNumber = "01012340002"; role = "BranchManager"; branchId = $smouha.id }
+$bmKafrAbdo = Invoke-Api POST "/api/users/staff" $ownerToken @{ email = "bm.kafrabdo@codecamp.demo"; password = "DemoPass123"; fullName = "Hossam Fathy"; phoneNumber = "01012340003"; role = "BranchManager"; branchId = $kafrAbdo.id }
+$fdSmouha = Invoke-Api POST "/api/users/staff" $ownerToken @{ email = "fd.smouha@codecamp.demo"; password = "DemoPass123"; fullName = "Mariam Younis"; phoneNumber = "01012340004"; role = "FrontDesk"; branchId = $smouha.id }
+$teacherUserSmouha = Invoke-Api POST "/api/users/staff" $ownerToken @{ email = "teacher.smouha@codecamp.demo"; password = "DemoPass123"; fullName = "Ahmed Nabil"; phoneNumber = "01012340005"; role = "Teacher"; branchId = $null }
+$teacherUserKafrAbdo = Invoke-Api POST "/api/users/staff" $ownerToken @{ email = "teacher.kafrabdo@codecamp.demo"; password = "DemoPass123"; fullName = "Sara Ibrahim"; phoneNumber = "01012340006"; role = "Teacher"; branchId = $null }
 
 Write-Host "  2 BranchManagers, 1 FrontDesk, 2 Teachers (login accounts only so far)"
 
 # --- 5. Teacher profiles, branch assignment, availability --------------------------------------
 Write-Host "`n[5/12] Creating teacher profiles, branch assignments, and availability..." -ForegroundColor Yellow
 
-$teacherDowntown = Invoke-Api POST "/api/teachers" $ownerToken @{ userId = $teacherUserDowntown.userId; hireDate = "2024-01-01"; payType = "Hourly"; payRate = 150 }
-$teacherUptown = Invoke-Api POST "/api/teachers" $ownerToken @{ userId = $teacherUserUptown.userId; hireDate = "2024-06-01"; payType = "PerSession"; payRate = 100 }
+$teacherSmouha = Invoke-Api POST "/api/teachers" $ownerToken @{ userId = $teacherUserSmouha.userId; hireDate = "2024-01-01"; payType = "Hourly"; payRate = 150 }
+$teacherKafrAbdo = Invoke-Api POST "/api/teachers" $ownerToken @{ userId = $teacherUserKafrAbdo.userId; hireDate = "2024-06-01"; payType = "PerSession"; payRate = 100 }
 
-Invoke-Api POST "/api/teachers/$($teacherDowntown.id)/branches" $ownerToken @{ branchId = $downtown.id } | Out-Null
-Invoke-Api POST "/api/teachers/$($teacherUptown.id)/branches" $ownerToken @{ branchId = $uptown.id } | Out-Null
+Invoke-Api POST "/api/teachers/$($teacherSmouha.id)/branches" $ownerToken @{ branchId = $smouha.id } | Out-Null
+Invoke-Api POST "/api/teachers/$($teacherKafrAbdo.id)/branches" $ownerToken @{ branchId = $kafrAbdo.id } | Out-Null
 
-# Wide Monday window so demo session times below never hit an availability conflict.
-Invoke-Api POST "/api/teachers/$($teacherDowntown.id)/availability" $ownerToken @{ branchId = $downtown.id; dayOfWeek = "Monday"; startTime = "09:00"; endTime = "17:00" } | Out-Null
-Invoke-Api POST "/api/teachers/$($teacherUptown.id)/availability" $ownerToken @{ branchId = $uptown.id; dayOfWeek = "Monday"; startTime = "09:00"; endTime = "17:00" } | Out-Null
+# Wide Monday window so the upcoming demo sessions below never hit an availability conflict.
+Invoke-Api POST "/api/teachers/$($teacherSmouha.id)/availability" $ownerToken @{ branchId = $smouha.id; dayOfWeek = "Monday"; startTime = "09:00"; endTime = "17:00" } | Out-Null
+Invoke-Api POST "/api/teachers/$($teacherKafrAbdo.id)/availability" $ownerToken @{ branchId = $kafrAbdo.id; dayOfWeek = "Monday"; startTime = "09:00"; endTime = "17:00" } | Out-Null
+
+# A wide-open window for today (UTC), too -- one demo session below is deliberately scheduled a
+# couple of hours in the past (so attendance/grading has something already-completed to act on),
+# and that only avoids an availability conflict if it's covered no matter which weekday "today" is.
+$todayUtcDow = (Get-Date).ToUniversalTime().DayOfWeek.ToString()
+Invoke-Api POST "/api/teachers/$($teacherSmouha.id)/availability" $ownerToken @{ branchId = $smouha.id; dayOfWeek = $todayUtcDow; startTime = "00:00"; endTime = "23:59" } | Out-Null
 
 Write-Host "  Both teachers assigned to their branch with Monday 09:00-17:00 availability"
 
@@ -126,51 +137,59 @@ Write-Host "`n[6/12] Creating guardian contacts and students..." -ForegroundColo
 
 # Guardians are contact records only (name/phone/email) - CEMS has no parent-facing login or
 # self-service portal, so these are created directly by staff rather than via self-registration.
-$guardian1 = Invoke-Api POST "/api/guardians" $ownerToken @{ fullName = "Pat Parent"; phone = "0400000001"; email = "pat.parent@example.com" }
-$guardian2 = Invoke-Api POST "/api/guardians" $ownerToken @{ fullName = "Robin Parent"; phone = "0400000002"; email = "robin.parent@example.com" }
+$guardianHany = Invoke-Api POST "/api/guardians" $ownerToken @{ fullName = "Hany Mahmoud"; phone = "01123450001"; email = "hany.mahmoud@example.com" }
+$guardianDoaa = Invoke-Api POST "/api/guardians" $ownerToken @{ fullName = "Doaa Kamel"; phone = "01123450002"; email = "doaa.kamel@example.com" }
+$guardianTarek = Invoke-Api POST "/api/guardians" $ownerToken @{ fullName = "Tarek Aboulfotouh"; phone = "01123450003"; email = "tarek.aboulfotouh@example.com" }
 
-$student1 = Invoke-Api POST "/api/students" $ownerToken @{ fullName = "Sam Student"; dateOfBirth = "2013-04-12"; gender = "Male"; branchId = $downtown.id }
-$student2 = Invoke-Api POST "/api/students" $ownerToken @{ fullName = "Sky Student"; dateOfBirth = "2014-08-22"; gender = "Female"; branchId = $downtown.id }
-$student3 = Invoke-Api POST "/api/students" $ownerToken @{ fullName = "Riley Student"; dateOfBirth = "2012-11-02"; gender = "Female"; branchId = $uptown.id }
+# A student can't be created without a guardian attached atomically -- CreateStudent takes either
+# an existingGuardianId (used here, since all three guardians above already exist) or a full set
+# of new-guardian fields; there's no separate "create student, then attach guardian" step anymore.
+$studentKhaled = Invoke-Api POST "/api/students" $ownerToken @{ fullName = "Khaled Hany"; dateOfBirth = "2013-04-12"; gender = "Male"; branchId = $smouha.id; existingGuardianId = $guardianHany.id; relationshipType = "Father"; isPrimaryContact = $true }
+$studentLina = Invoke-Api POST "/api/students" $ownerToken @{ fullName = "Lina Hany"; dateOfBirth = "2014-08-22"; gender = "Female"; branchId = $smouha.id; existingGuardianId = $guardianHany.id; relationshipType = "Father"; isPrimaryContact = $true }
+$studentMalak = Invoke-Api POST "/api/students" $ownerToken @{ fullName = "Malak Kamel"; dateOfBirth = "2012-11-02"; gender = "Female"; branchId = $kafrAbdo.id; existingGuardianId = $guardianDoaa.id; relationshipType = "Mother"; isPrimaryContact = $true }
+$studentOmar = Invoke-Api POST "/api/students" $ownerToken @{ fullName = "Omar Tarek"; dateOfBirth = "2011-02-15"; gender = "Male"; branchId = $smouha.id; existingGuardianId = $guardianTarek.id; relationshipType = "Father"; isPrimaryContact = $true }
+$studentRana = Invoke-Api POST "/api/students" $ownerToken @{ fullName = "Rana Tarek"; dateOfBirth = "2015-09-30"; gender = "Female"; branchId = $kafrAbdo.id; existingGuardianId = $guardianTarek.id; relationshipType = "Father"; isPrimaryContact = $true }
 
-Invoke-Api POST "/api/students/$($student1.id)/guardians" $ownerToken @{ guardianId = $guardian1.id; relationshipType = "Father"; isPrimaryContact = $true } | Out-Null
-Invoke-Api POST "/api/students/$($student2.id)/guardians" $ownerToken @{ guardianId = $guardian1.id; relationshipType = "Father"; isPrimaryContact = $true } | Out-Null
-Invoke-Api POST "/api/students/$($student3.id)/guardians" $ownerToken @{ guardianId = $guardian2.id; relationshipType = "Mother"; isPrimaryContact = $true } | Out-Null
-
-Write-Host "  2 guardian contacts, 3 students (Pat Parent has 2 kids across the same branch)"
+Write-Host "  3 guardian contacts, 5 students (Hany Mahmoud and Tarek Aboulfotouh each have 2 kids)"
 
 # --- 7. Enrollments ------------------------------------------------------------------------------
 Write-Host "`n[7/12] Enrolling students in courses..." -ForegroundColor Yellow
 
-Invoke-Api POST "/api/courses/$($mathCourseDowntown.id)/enrollments" $ownerToken @{ studentId = $student1.id } | Out-Null
-$enrollment2 = Invoke-Api POST "/api/courses/$($physicsCourseDowntown.id)/enrollments" $ownerToken @{ studentId = $student2.id }
-Invoke-Api POST "/api/courses/$($mathCourseUptown.id)/enrollments" $ownerToken @{ studentId = $student3.id } | Out-Null
+Invoke-Api POST "/api/courses/$($pythonCourseSmouha.id)/enrollments" $ownerToken @{ studentId = $studentKhaled.id } | Out-Null
+Invoke-Api POST "/api/courses/$($pythonCourseSmouha.id)/enrollments" $ownerToken @{ studentId = $studentOmar.id } | Out-Null
+$enrollmentWebDev = Invoke-Api POST "/api/courses/$($webDevCourseSmouha.id)/enrollments" $ownerToken @{ studentId = $studentLina.id }
+Invoke-Api POST "/api/courses/$($scratchCourseKafrAbdo.id)/enrollments" $ownerToken @{ studentId = $studentMalak.id } | Out-Null
+Invoke-Api POST "/api/courses/$($scratchCourseKafrAbdo.id)/enrollments" $ownerToken @{ studentId = $studentRana.id } | Out-Null
 
-Write-Host "  3 active enrollments"
+Write-Host "  5 active enrollments"
 
 # --- 8. Scheduled sessions -----------------------------------------------------------------------
 Write-Host "`n[8/12] Scheduling sessions..." -ForegroundColor Yellow
 
 $nextMonday = Get-NextWeekday -DayOfWeek Monday
 $mondayAfter = Get-NextWeekday -DayOfWeek Monday -WeeksAhead 1
+$nowUtc = (Get-Date).ToUniversalTime()
 
-$session1 = Invoke-Api POST "/api/courses/$($mathCourseDowntown.id)/sessions" $ownerToken @{
-    roomId = $downtownRoomA.id; teacherId = $teacherDowntown.id
-    startUtc = $nextMonday.AddHours(10).ToString("yyyy-MM-ddTHH:mm:ssZ"); endUtc = $nextMonday.AddHours(11).ToString("yyyy-MM-ddTHH:mm:ssZ")
+# Deliberately in the recent past (not "next Monday" like the others) so there's a completed
+# session to mark attendance and record a grade against -- MarkAttendanceCommandHandler rejects
+# a session that hasn't started yet or ended more than 4 hours ago, so this has to be real.
+$session1 = Invoke-Api POST "/api/courses/$($pythonCourseSmouha.id)/sessions" $ownerToken @{
+    roomId = $smouhaRoomA.id; teacherId = $teacherSmouha.id
+    startUtc = $nowUtc.AddHours(-2).ToString("yyyy-MM-ddTHH:mm:ssZ"); endUtc = $nowUtc.AddHours(-1).ToString("yyyy-MM-ddTHH:mm:ssZ")
     override = $false; overrideReason = $null
 }
-Invoke-Api POST "/api/courses/$($mathCourseDowntown.id)/sessions" $ownerToken @{
-    roomId = $downtownRoomA.id; teacherId = $teacherDowntown.id
+Invoke-Api POST "/api/courses/$($pythonCourseSmouha.id)/sessions" $ownerToken @{
+    roomId = $smouhaRoomA.id; teacherId = $teacherSmouha.id
     startUtc = $mondayAfter.AddHours(10).ToString("yyyy-MM-ddTHH:mm:ssZ"); endUtc = $mondayAfter.AddHours(11).ToString("yyyy-MM-ddTHH:mm:ssZ")
     override = $false; overrideReason = $null
 } | Out-Null
-Invoke-Api POST "/api/courses/$($physicsCourseDowntown.id)/sessions" $ownerToken @{
-    roomId = $downtownRoomB.id; teacherId = $teacherDowntown.id
+Invoke-Api POST "/api/courses/$($webDevCourseSmouha.id)/sessions" $ownerToken @{
+    roomId = $smouhaLab2.id; teacherId = $teacherSmouha.id
     startUtc = $nextMonday.AddHours(13).ToString("yyyy-MM-ddTHH:mm:ssZ"); endUtc = $nextMonday.AddHours(14).ToString("yyyy-MM-ddTHH:mm:ssZ")
     override = $false; overrideReason = $null
 } | Out-Null
-Invoke-Api POST "/api/courses/$($mathCourseUptown.id)/sessions" $ownerToken @{
-    roomId = $uptownRoomA.id; teacherId = $teacherUptown.id
+Invoke-Api POST "/api/courses/$($scratchCourseKafrAbdo.id)/sessions" $ownerToken @{
+    roomId = $kafrAbdoRoomA.id; teacherId = $teacherKafrAbdo.id
     startUtc = $nextMonday.AddHours(10).ToString("yyyy-MM-ddTHH:mm:ssZ"); endUtc = $nextMonday.AddHours(11).ToString("yyyy-MM-ddTHH:mm:ssZ")
     override = $false; overrideReason = $null
 } | Out-Null
@@ -180,15 +199,15 @@ Write-Host "  4 sessions scheduled across both branches"
 # --- 9. Attendance --------------------------------------------------------------------------------
 Write-Host "`n[9/12] Marking attendance..." -ForegroundColor Yellow
 
-Invoke-Api POST "/api/sessions/$($session1.id)/attendance" $ownerToken @{ studentId = $student1.id; status = "Present" } | Out-Null
+Invoke-Api POST "/api/sessions/$($session1.id)/attendance" $ownerToken @{ studentId = $studentKhaled.id; status = "Present" } | Out-Null
 
 Write-Host "  1 attendance record marked (the rest are left Unmarked, on purpose -- demonstrates the roster view)"
 
 # --- 10. Exam and grades ---------------------------------------------------------------------------
 Write-Host "`n[10/12] Creating an exam and recording a grade..." -ForegroundColor Yellow
 
-$exam = Invoke-Api POST "/api/courses/$($mathCourseDowntown.id)/exams" $ownerToken @{ name = "Term 1 Midterm"; maxScore = 100; examDate = $nextMonday.ToString("yyyy-MM-dd") }
-Invoke-Api POST "/api/exams/$($exam.id)/grades" $ownerToken @{ studentId = $student1.id; score = 82; comments = "Solid work" } | Out-Null
+$exam = Invoke-Api POST "/api/courses/$($pythonCourseSmouha.id)/exams" $ownerToken @{ name = "Python Basics Assessment"; maxScore = 100; examDate = $nowUtc.ToString("yyyy-MM-dd") }
+Invoke-Api POST "/api/exams/$($exam.id)/grades" $ownerToken @{ studentId = $studentKhaled.id; score = 88; comments = "Great grasp of loops and functions" } | Out-Null
 
 Write-Host "  1 exam with 1 grade recorded"
 
@@ -196,30 +215,30 @@ Write-Host "  1 exam with 1 grade recorded"
 Write-Host "`n[11/12] Creating invoices and payments..." -ForegroundColor Yellow
 
 # Fully paid, package-based.
-$invoicePaid = Invoke-Api POST "/api/students/$($student1.id)/invoices" $ownerToken @{ packageId = $mathPackageDowntown.id; amount = $null; dueDate = (Get-Date).AddDays(14).ToString("yyyy-MM-dd") }
-Invoke-Api POST "/api/invoices/$($invoicePaid.id)/payments" $ownerToken @{ amountPaid = 600; paymentDate = (Get-Date).ToString("yyyy-MM-dd"); method = "Card" } | Out-Null
+$invoicePaid = Invoke-Api POST "/api/students/$($studentKhaled.id)/invoices" $ownerToken @{ packageId = $pythonPackageSmouha.id; amount = $null; dueDate = (Get-Date).AddDays(14).ToString("yyyy-MM-dd") }
+Invoke-Api POST "/api/invoices/$($invoicePaid.id)/payments" $ownerToken @{ amountPaid = 2400; paymentDate = (Get-Date).ToString("yyyy-MM-dd"); method = "Card" } | Out-Null
 
 # Partially paid, package-based.
-$invoicePartial = Invoke-Api POST "/api/students/$($student2.id)/invoices" $ownerToken @{ packageId = $physicsPackageDowntown.id; amount = $null; dueDate = (Get-Date).AddDays(14).ToString("yyyy-MM-dd") }
-Invoke-Api POST "/api/invoices/$($invoicePartial.id)/payments" $ownerToken @{ amountPaid = 300; paymentDate = (Get-Date).ToString("yyyy-MM-dd"); method = "Cash" } | Out-Null
+$invoicePartial = Invoke-Api POST "/api/students/$($studentLina.id)/invoices" $ownerToken @{ packageId = $webDevPackageSmouha.id; amount = $null; dueDate = (Get-Date).AddDays(14).ToString("yyyy-MM-dd") }
+Invoke-Api POST "/api/invoices/$($invoicePartial.id)/payments" $ownerToken @{ amountPaid = 1200; paymentDate = (Get-Date).ToString("yyyy-MM-dd"); method = "Cash" } | Out-Null
 
 # Unpaid and overdue, ad-hoc registration fee -- demonstrates the outstanding-balance / overdue view.
-Invoke-Api POST "/api/students/$($student3.id)/invoices" $ownerToken @{ packageId = $null; amount = 50; dueDate = (Get-Date).AddDays(-7).ToString("yyyy-MM-dd") } | Out-Null
+Invoke-Api POST "/api/students/$($studentMalak.id)/invoices" $ownerToken @{ packageId = $null; amount = 200; dueDate = (Get-Date).AddDays(-7).ToString("yyyy-MM-dd") } | Out-Null
 
 Write-Host "  3 invoices: 1 fully paid, 1 partially paid, 1 unpaid + overdue"
 
 # --- 12. Payroll -------------------------------------------------------------------------------------
 Write-Host "`n[12/12] Generating a payroll run..." -ForegroundColor Yellow
 
-$payrollRun = Invoke-Api POST "/api/teachers/$($teacherDowntown.id)/payroll-runs" $ownerToken @{ periodStart = $nextMonday.ToString("yyyy-MM-dd"); periodEnd = $nextMonday.ToString("yyyy-MM-dd") }
+$payrollRun = Invoke-Api POST "/api/teachers/$($teacherSmouha.id)/payroll-runs" $ownerToken @{ periodStart = $nextMonday.ToString("yyyy-MM-dd"); periodEnd = $nextMonday.ToString("yyyy-MM-dd") }
 Invoke-Api POST "/api/payroll-runs/$($payrollRun.id)/approve" $ownerToken | Out-Null
 
-Write-Host "  1 payroll run generated and approved for Tara Teacher (Downtown), total: $($payrollRun.totalAmount)"
+Write-Host "  1 payroll run generated and approved for Ahmed Nabil (Smouha), total: $($payrollRun.totalAmount)"
 
 # --- Summary -----------------------------------------------------------------------------------------
 Write-Host "`n=== Done. Demo accounts (all passwords: DemoPass123) ===" -ForegroundColor Cyan
-Write-Host "  Owner:          $ownerEmail"
-Write-Host "  BranchManager:  bm.downtown@cems.demo (Downtown), bm.uptown@cems.demo (Uptown)"
-Write-Host "  FrontDesk:      fd.downtown@cems.demo (Downtown)"
-Write-Host "  Teacher:        teacher.downtown@cems.demo (Downtown, Hourly), teacher.uptown@cems.demo (Uptown, PerSession)"
-Write-Host "  Guardians:      Pat Parent (contact only, 2 kids: Sam, Sky), Robin Parent (contact only, 1 kid: Riley)"
+Write-Host "  Owner:          $ownerEmail (Mostafa El-Sayed)"
+Write-Host "  BranchManager:  bm.smouha@codecamp.demo (Nourhan Adel, Smouha), bm.kafrabdo@codecamp.demo (Hossam Fathy, Kafr Abdo)"
+Write-Host "  FrontDesk:      fd.smouha@codecamp.demo (Mariam Younis, Smouha)"
+Write-Host "  Teacher:        teacher.smouha@codecamp.demo (Ahmed Nabil, Smouha, Hourly), teacher.kafrabdo@codecamp.demo (Sara Ibrahim, Kafr Abdo, PerSession)"
+Write-Host "  Guardians:      Hany Mahmoud (2 kids: Khaled, Lina), Doaa Kamel (1 kid: Malak), Tarek Aboulfotouh (2 kids: Omar, Rana)"
