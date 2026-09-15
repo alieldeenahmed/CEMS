@@ -6,5 +6,5 @@ public class Curriculum
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
 
-    public ICollection<Subject> Subjects { get; set; } = new List<Subject>();
+    public ICollection<Course> Courses { get; set; } = new List<Course>();
 }

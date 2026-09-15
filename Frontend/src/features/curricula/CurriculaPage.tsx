@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ROLES } from '@/features/auth/constants'
@@ -8,7 +8,6 @@ import { SearchInput } from '@/shared/ui/SearchInput'
 import { getErrorMessage } from '@/shared/api/errors'
 import { useCurricula, useDeleteCurriculum } from './api'
 import { CurriculumFormModal } from './CurriculumFormModal'
-import { SubjectsSection } from './SubjectsSection'
 import type { Curriculum } from './types'
 
 export function CurriculaPage() {
@@ -16,7 +15,6 @@ export function CurriculaPage() {
   const canManage = hasRole(ROLES.Owner, ROLES.BranchManager)
   const { data: curricula, isLoading, isError } = useCurricula()
   const deleteCurriculum = useDeleteCurriculum()
-  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [modalState, setModalState] = useState<'closed' | 'create' | Curriculum>('closed')
   const [search, setSearch] = useState('')
 
@@ -38,7 +36,7 @@ export function CurriculaPage() {
     <div>
       <PageHeader
         title="Curricula"
-        description="Curricula and the subjects taught under each one."
+        description="The academic curricula courses are organized under."
         action={
           canManage ? (
             <Button onClick={() => setModalState('create')}>
@@ -62,51 +60,38 @@ export function CurriculaPage() {
 
       {filteredCurricula && (
         <div className="overflow-hidden rounded-lg border border-line bg-paper">
-          {filteredCurricula.map((curriculum, index) => {
-            const isExpanded = expandedId === curriculum.id
-            return (
-              <div key={curriculum.id} className={index > 0 ? 'border-t border-line' : ''}>
-                <div className="flex items-center gap-3 px-4 py-3">
+          {filteredCurricula.map((curriculum, index) => (
+            <div
+              key={curriculum.id}
+              className={`flex items-center gap-3 px-4 py-3 ${index > 0 ? 'border-t border-line' : ''}`}
+            >
+              <div className="flex-1">
+                <p className="text-sm font-medium text-ink">{curriculum.name}</p>
+                <p className="text-xs text-muted">{curriculum.description}</p>
+              </div>
+
+              {canManage && (
+                <>
                   <button
                     type="button"
-                    onClick={() => setExpandedId(isExpanded ? null : curriculum.id)}
-                    aria-label={isExpanded ? 'Collapse' : 'Expand'}
-                    className="text-muted transition-colors hover:text-ink"
+                    aria-label={`Edit ${curriculum.name}`}
+                    onClick={() => setModalState(curriculum)}
+                    className="text-muted transition-colors hover:text-navy"
                   >
-                    {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    <Pencil size={15} />
                   </button>
-
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-ink">{curriculum.name}</p>
-                    <p className="text-xs text-muted">{curriculum.description}</p>
-                  </div>
-
-                  {canManage && (
-                    <>
-                      <button
-                        type="button"
-                        aria-label={`Edit ${curriculum.name}`}
-                        onClick={() => setModalState(curriculum)}
-                        className="text-muted transition-colors hover:text-navy"
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Delete ${curriculum.name}`}
-                        onClick={() => handleDelete(curriculum)}
-                        className="text-muted transition-colors hover:text-coral"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {isExpanded && <SubjectsSection curriculumId={curriculum.id} />}
-              </div>
-            )
-          })}
+                  <button
+                    type="button"
+                    aria-label={`Delete ${curriculum.name}`}
+                    onClick={() => handleDelete(curriculum)}
+                    className="text-muted transition-colors hover:text-coral"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
 
           {filteredCurricula.length === 0 && (
             <p className="px-4 py-6 text-center text-sm text-muted">

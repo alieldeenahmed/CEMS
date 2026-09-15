@@ -27,6 +27,6 @@ public class GetCourseByIdQueryHandler : IRequestHandler<GetCourseByIdQuery, Cou
             throw new ForbiddenAccessException("You do not have access to this course.");
         }
 
-        return new CourseDto(course.Id, course.Name, course.DeliveryMode, course.SubjectId, course.BranchId);
+        return new CourseDto(course.Id, course.Name, course.DeliveryMode, course.CurriculumId, course.BranchId);
     }
 }

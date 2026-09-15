@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useBranches } from '@/features/branches/api'
-import { useCurricula, useSubjects } from '@/features/curricula/api'
+import { useCurricula } from '@/features/curricula/api'
 import { Button } from '@/shared/ui/Button'
 import { Select } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
@@ -13,7 +13,7 @@ import type { Course } from './types'
 const courseSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   deliveryMode: z.enum(['Group', 'OneOnOne']),
-  subjectId: z.string().min(1, 'Subject is required'),
+  curriculumId: z.string().min(1, 'Curriculum is required'),
   branchId: z.string().min(1, 'Branch is required'),
 })
 
@@ -22,7 +22,6 @@ type CourseFormValues = z.infer<typeof courseSchema>
 export function CourseFormModal({ course, onClose }: { course: Course | null; onClose: () => void }) {
   const { data: branches } = useBranches()
   const { data: curricula } = useCurricula()
-  const { data: subjects } = useSubjects()
   const createCourse = useCreateCourse()
   const updateCourse = useUpdateCourse()
 
@@ -35,13 +34,12 @@ export function CourseFormModal({ course, onClose }: { course: Course | null; on
     defaultValues: {
       name: course?.name ?? '',
       deliveryMode: course?.deliveryMode ?? 'Group',
-      subjectId: course?.subjectId ?? '',
+      curriculumId: course?.curriculumId ?? '',
       branchId: course?.branchId ?? '',
     },
   })
 
   const isSaving = createCourse.isPending || updateCourse.isPending
-  const curriculumNameById = new Map(curricula?.map((c) => [c.id, c.name]))
 
   async function onSubmit(values: CourseFormValues) {
     if (course) {
@@ -64,11 +62,11 @@ export function CourseFormModal({ course, onClose }: { course: Course | null; on
 
         {!course && (
           <>
-            <Select label="Subject" {...register('subjectId')} error={errors.subjectId?.message}>
-              <option value="">Select a subject</option>
-              {subjects?.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {curriculumNameById.get(subject.curriculumId) ?? 'Unknown'} · {subject.name}
+            <Select label="Curriculum" {...register('curriculumId')} error={errors.curriculumId?.message}>
+              <option value="">Select a curriculum</option>
+              {curricula?.map((curriculum) => (
+                <option key={curriculum.id} value={curriculum.id}>
+                  {curriculum.name}
                 </option>
               ))}
             </Select>

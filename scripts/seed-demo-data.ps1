@@ -81,21 +81,19 @@ $uptownRoomA = Invoke-Api POST "/api/branches/$($uptown.id)/rooms" $ownerToken @
 
 Write-Host "  Downtown Center ($($downtown.id)), Uptown Center ($($uptown.id))"
 
-# --- 3. Curriculum, subjects, courses, packages ------------------------------------------------
-Write-Host "`n[3/12] Creating curriculum, subjects, courses, and packages..." -ForegroundColor Yellow
+# --- 3. Curriculum, courses, packages ----------------------------------------------------------
+Write-Host "`n[3/12] Creating curriculum, courses, and packages..." -ForegroundColor Yellow
 
 $curriculum = Invoke-Api POST "/api/curricula" $ownerToken @{ name = "IG"; description = "International General Certificate" }
-$mathSubject = Invoke-Api POST "/api/subjects" $ownerToken @{ name = "Mathematics"; curriculumId = $curriculum.id }
-$physicsSubject = Invoke-Api POST "/api/subjects" $ownerToken @{ name = "Physics"; curriculumId = $curriculum.id }
 
-$mathCourseDowntown = Invoke-Api POST "/api/courses" $ownerToken @{ name = "IG Mathematics - Group A"; deliveryMode = "Group"; subjectId = $mathSubject.id; branchId = $downtown.id }
-$physicsCourseDowntown = Invoke-Api POST "/api/courses" $ownerToken @{ name = "IG Physics - 1:1"; deliveryMode = "OneOnOne"; subjectId = $physicsSubject.id; branchId = $downtown.id }
-$mathCourseUptown = Invoke-Api POST "/api/courses" $ownerToken @{ name = "IG Mathematics - Group A"; deliveryMode = "Group"; subjectId = $mathSubject.id; branchId = $uptown.id }
+$mathCourseDowntown = Invoke-Api POST "/api/courses" $ownerToken @{ name = "IG Mathematics - Group A"; deliveryMode = "Group"; curriculumId = $curriculum.id; branchId = $downtown.id }
+$physicsCourseDowntown = Invoke-Api POST "/api/courses" $ownerToken @{ name = "IG Physics - 1:1"; deliveryMode = "OneOnOne"; curriculumId = $curriculum.id; branchId = $downtown.id }
+$mathCourseUptown = Invoke-Api POST "/api/courses" $ownerToken @{ name = "IG Mathematics - Group A"; deliveryMode = "Group"; curriculumId = $curriculum.id; branchId = $uptown.id }
 
 $mathPackageDowntown = Invoke-Api POST "/api/courses/$($mathCourseDowntown.id)/packages" $ownerToken @{ sessionCount = 12; price = 600 }
 $physicsPackageDowntown = Invoke-Api POST "/api/courses/$($physicsCourseDowntown.id)/packages" $ownerToken @{ sessionCount = 12; price = 900 }
 
-Write-Host "  Curriculum '$($curriculum.name)' with 2 subjects, 3 courses, 2 packages"
+Write-Host "  Curriculum '$($curriculum.name)' with 3 courses, 2 packages"
 
 # --- 4. Staff accounts -------------------------------------------------------------------------
 Write-Host "`n[4/12] Creating staff accounts..." -ForegroundColor Yellow

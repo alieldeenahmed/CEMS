@@ -10,9 +10,9 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
     {
         builder.Property(c => c.Name).IsRequired().HasMaxLength(200);
 
-        builder.HasOne(c => c.Subject)
-            .WithMany(s => s.Courses)
-            .HasForeignKey(c => c.SubjectId)
+        builder.HasOne(c => c.Curriculum)
+            .WithMany(cur => cur.Courses)
+            .HasForeignKey(c => c.CurriculumId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(c => c.Branch)

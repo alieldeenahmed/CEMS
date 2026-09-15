@@ -8,7 +8,7 @@ public class CreateCourseCommandValidator : AbstractValidator<CreateCourseComman
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
         RuleFor(x => x.DeliveryMode).IsInEnum();
-        RuleFor(x => x.SubjectId).NotEmpty();
+        RuleFor(x => x.CurriculumId).NotEmpty();
         RuleFor(x => x.BranchId).NotEmpty();
     }
 }

@@ -20,10 +20,10 @@ public class CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, C
 
     public async Task<CourseDto> Handle(CreateCourseCommand request, CancellationToken cancellationToken)
     {
-        var subjectExists = await _context.Subjects.AnyAsync(s => s.Id == request.SubjectId, cancellationToken);
-        if (!subjectExists)
+        var curriculumExists = await _context.Curricula.AnyAsync(c => c.Id == request.CurriculumId, cancellationToken);
+        if (!curriculumExists)
         {
-            throw new NotFoundException(nameof(Subject), request.SubjectId);
+            throw new NotFoundException(nameof(Curriculum), request.CurriculumId);
         }
 
         var branchExists = await _context.Branches.AnyAsync(b => b.Id == request.BranchId, cancellationToken);
@@ -42,13 +42,13 @@ public class CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, C
             Id = Guid.NewGuid(),
             Name = request.Name,
             DeliveryMode = request.DeliveryMode,
-            SubjectId = request.SubjectId,
+            CurriculumId = request.CurriculumId,
             BranchId = request.BranchId
         };
 
         _context.Courses.Add(course);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new CourseDto(course.Id, course.Name, course.DeliveryMode, course.SubjectId, course.BranchId);
+        return new CourseDto(course.Id, course.Name, course.DeliveryMode, course.CurriculumId, course.BranchId);
     }
 }

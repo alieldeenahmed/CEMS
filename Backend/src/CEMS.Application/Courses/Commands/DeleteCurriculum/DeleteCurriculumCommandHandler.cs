@@ -28,7 +28,7 @@ public class DeleteCurriculumCommandHandler : IRequestHandler<DeleteCurriculumCo
         }
         catch (DbUpdateException)
         {
-            throw new BadRequestException(new[] { "Cannot delete a curriculum that still has subjects." });
+            throw new BadRequestException(new[] { "Cannot delete a curriculum that still has courses." });
         }
     }
 }

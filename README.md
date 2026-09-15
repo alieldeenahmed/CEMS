@@ -192,10 +192,13 @@ Prints every demo account's email at the end (all passwords: `DemoPass123`).
 - [x] Teacher Management: Teacher profile CRUD (Owner-only, pay rate is
       sensitive), floating branch assignment, self-managed availability
       windows (teacher/BranchManager/Owner, all branch-scoped)
-- [x] Course & Curriculum Management: Curriculum/Subject (org-wide catalog,
-      viewable by anyone, Owner-only to edit), Course (branch-scoped,
-      Owner/BranchManager manage it), CourseEnrollment (soft-drop, enforces
-      student and course share a branch)
+- [x] Course & Curriculum Management: `Curriculum` (org-wide catalog,
+      viewable by anyone, Owner/BranchManager manage it — courses attach
+      directly to a curriculum; there is no separate Subject layer between
+      them, removed once it turned out not to reflect how the business
+      actually organizes courses), `Course` (branch-scoped, Owner/BranchManager
+      manage it), `CourseEnrollment` (soft-drop, enforces student and course
+      share a branch)
 - [x] Scheduling & Room Booking: `CourseSession` with conflict-checking
       against room double-booking, teacher double-booking, and teacher
       declared availability; Owner/BranchManager can override a detected
@@ -284,8 +287,10 @@ Prints every demo account's email at the end (all passwords: `DemoPass123`).
       be able to add one with no contact on file at all.
 - [ ] Student branch transfer with history (`StudentBranchHistory`) —
       deliberately deferred until it's the thing being built, not bare CRUD
-- [ ] `TeacherSubject` (which subjects a teacher teaches) — still deferred;
-      no module has needed it yet
+- [ ] Declared teacher qualification (which courses/curricula a teacher is
+      qualified to teach, as opposed to what `CourseSession.TeacherId`
+      already tracks as actually scheduled) — still deferred; no module has
+      needed it yet
 
 ## Production readiness
 
@@ -338,7 +343,7 @@ whatever the host builds natively — Railway's Nixpacks or Azure App
 Service's native .NET runtime — rather than a Dockerfile; see "Hosting").
 
 **Can wait:** CI/CD, and the two items already deferred above
-(`StudentBranchHistory`, `TeacherSubject`).
+(`StudentBranchHistory`, declared teacher qualification).
 
 Turning this into a real multi-tenant product (selling to many *unrelated*
 centers, not just one center with several branches) would be a materially

@@ -22,7 +22,7 @@ public class GetMyCoursesQueryHandler : IRequestHandler<GetMyCoursesQuery, List<
             .Select(s => s.Course)
             .Distinct()
             .OrderBy(c => c.Name)
-            .Select(c => new CourseDto(c.Id, c.Name, c.DeliveryMode, c.SubjectId, c.BranchId))
+            .Select(c => new CourseDto(c.Id, c.Name, c.DeliveryMode, c.CurriculumId, c.BranchId))
             .ToListAsync(cancellationToken);
     }
 }

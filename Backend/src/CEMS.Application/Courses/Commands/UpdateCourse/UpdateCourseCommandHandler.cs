@@ -32,6 +32,6 @@ public class UpdateCourseCommandHandler : IRequestHandler<UpdateCourseCommand, C
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new CourseDto(course.Id, course.Name, course.DeliveryMode, course.SubjectId, course.BranchId);
+        return new CourseDto(course.Id, course.Name, course.DeliveryMode, course.CurriculumId, course.BranchId);
     }
 }

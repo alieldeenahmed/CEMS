@@ -5,14 +5,14 @@ export interface Course {
   id: string
   name: string
   deliveryMode: DeliveryMode
-  subjectId: string
+  curriculumId: string
   branchId: string
 }
 
 export interface CourseInput {
   name: string
   deliveryMode: DeliveryMode
-  subjectId: string
+  curriculumId: string
   branchId: string
 }
 

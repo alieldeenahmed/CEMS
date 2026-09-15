@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useBranches } from '@/features/branches/api'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ROLES } from '@/features/auth/constants'
-import { useSubjects } from '@/features/curricula/api'
+import { useCurricula } from '@/features/curricula/api'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { SearchInput } from '@/shared/ui/SearchInput'
@@ -18,14 +18,14 @@ export function CoursesPage() {
   const canManageCourses = hasRole(ROLES.Owner, ROLES.BranchManager)
   const { data: courses, isLoading, isError } = useCourses()
   const { data: branches } = useBranches()
-  const { data: subjects } = useSubjects()
+  const { data: curricula } = useCurricula()
   const deleteCourse = useDeleteCourse()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [modalState, setModalState] = useState<'closed' | 'create' | Course>('closed')
   const [search, setSearch] = useState('')
 
   const branchNameById = new Map(branches?.map((b) => [b.id, b.name]))
-  const subjectNameById = new Map(subjects?.map((s) => [s.id, s.name]))
+  const curriculumNameById = new Map(curricula?.map((c) => [c.id, c.name]))
   const query = search.trim().toLowerCase()
   const filteredCourses = courses?.filter((course) => course.name.toLowerCase().includes(query))
 
@@ -82,7 +82,7 @@ export function CoursesPage() {
                   <div className="flex-1">
                     <p className="text-sm font-medium text-ink">{course.name}</p>
                     <p className="text-xs text-muted">
-                      {subjectNameById.get(course.subjectId) ?? 'Unknown subject'} ·{' '}
+                      {curriculumNameById.get(course.curriculumId) ?? 'Unknown curriculum'} ·{' '}
                       {branchNameById.get(course.branchId) ?? 'Unknown branch'}
                     </p>
                   </div>

@@ -29,7 +29,7 @@ public class GetCoursesQueryHandler : IRequestHandler<GetCoursesQuery, List<Cour
 
         return await query
             .OrderBy(c => c.Name)
-            .Select(c => new CourseDto(c.Id, c.Name, c.DeliveryMode, c.SubjectId, c.BranchId))
+            .Select(c => new CourseDto(c.Id, c.Name, c.DeliveryMode, c.CurriculumId, c.BranchId))
             .ToListAsync(cancellationToken);
     }
 }

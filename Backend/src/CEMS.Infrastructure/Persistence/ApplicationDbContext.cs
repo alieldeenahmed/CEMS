@@ -32,7 +32,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<TeacherBranch> TeacherBranches => Set<TeacherBranch>();
     public DbSet<TeacherAvailability> TeacherAvailabilities => Set<TeacherAvailability>();
     public DbSet<Curriculum> Curricula => Set<Curriculum>();
-    public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
     public DbSet<CourseSession> CourseSessions => Set<CourseSession>();
