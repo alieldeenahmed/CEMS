@@ -8,6 +8,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { Select } from '@/shared/ui/Input'
 import { useCancelSession, useSessionsForCourse } from './api'
 import { CreateSessionModal } from './CreateSessionModal'
+import { SubstituteTeacherModal } from './SubstituteTeacherModal'
 import { formatUtcForDisplay } from './time'
 import type { CourseSession } from './types'
 
@@ -24,6 +25,7 @@ export function SchedulingPage() {
   const [courseId, setCourseId] = useState('')
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [cancelingSessionId, setCancelingSessionId] = useState<string | null>(null)
+  const [substitutingSession, setSubstitutingSession] = useState<CourseSession | null>(null)
 
   const { data: sessions, isLoading } = useSessionsForCourse(courseId || null)
   const cancelSession = useCancelSession(courseId)
@@ -101,9 +103,16 @@ export function SchedulingPage() {
                     onDismiss={() => setCancelingSessionId(null)}
                   />
                 ) : (
-                  <Button variant="secondary" onClick={() => setCancelingSessionId(session.id)}>
-                    Cancel
-                  </Button>
+                  <>
+                    {new Date(session.startUtc) > new Date() && (
+                      <Button variant="secondary" onClick={() => setSubstitutingSession(session)}>
+                        Substitute teacher
+                      </Button>
+                    )}
+                    <Button variant="secondary" onClick={() => setCancelingSessionId(session.id)}>
+                      Cancel
+                    </Button>
+                  </>
                 ))}
             </div>
           ))}
@@ -116,6 +125,15 @@ export function SchedulingPage() {
 
       {isCreateOpen && selectedCourse && (
         <CreateSessionModal course={selectedCourse} onClose={() => setIsCreateOpen(false)} />
+      )}
+
+      {substitutingSession && selectedCourse && (
+        <SubstituteTeacherModal
+          session={substitutingSession}
+          courseId={selectedCourse.id}
+          branchId={selectedCourse.branchId}
+          onClose={() => setSubstitutingSession(null)}
+        />
       )}
     </div>
   )

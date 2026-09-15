@@ -207,7 +207,18 @@ Prints every demo account's email at the end (all passwords: `DemoPass123`).
       branch) are never overridable. Cancelling a session can link to a
       makeup session. Enrollment waitlisting (`CourseEnrollment.Position`)
       derives capacity from the room of the course's earliest session;
-      promotion is manual (no auto-promotion)
+      promotion is manual (no auto-promotion). `TeacherId` lives on the
+      *session*, not the course, so a course with more than one group's
+      worth of sessions can already be split across multiple teachers with
+      no schema change — every teacher-scoped access check (grades, exams,
+      "my courses") already keys off "does this teacher have a session on
+      this course," not a single course-owner field. `POST
+      /sessions/{id}/substitute-teacher` reassigns an already-scheduled
+      session to a different teacher in place (room and time unchanged),
+      running the exact same conflict/override rules as creating a session;
+      blocked outright for a cancelled session or one that's already
+      started — a substitution only makes sense for something still ahead
+      of you.
 - [x] Attendance: `SessionAttendance` marked by the assigned teacher (self)
       or Owner/BranchManager (branch-scoped admin correction) — never
       FrontDesk. Roster view shows every actively-enrolled student

@@ -47,3 +47,28 @@ export function useCancelSession(courseId: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sessions', courseId] }),
   })
 }
+
+export function useSubstituteSessionTeacher(courseId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      newTeacherId,
+      override,
+      overrideReason,
+    }: {
+      id: string
+      newTeacherId: string
+      override: boolean
+      overrideReason: string | null
+    }) => {
+      const { data } = await apiClient.post<CourseSession>(`/sessions/${id}/substitute-teacher`, {
+        newTeacherId,
+        override,
+        overrideReason,
+      })
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sessions', courseId] }),
+  })
+}

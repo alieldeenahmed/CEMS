@@ -4,6 +4,7 @@ using CEMS.Application.Attendance.Queries.GetAttendanceForSession;
 using CEMS.Application.Scheduling;
 using CEMS.Application.Scheduling.Commands.CancelSession;
 using CEMS.Application.Scheduling.Commands.CreateSession;
+using CEMS.Application.Scheduling.Commands.SubstituteSessionTeacher;
 using CEMS.Application.Scheduling.Queries.GetSessionById;
 using CEMS.Application.Scheduling.Queries.GetSessionsForCourse;
 using CEMS.Domain.Attendance;
@@ -61,6 +62,15 @@ public class SessionsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("api/sessions/{id:guid}/substitute-teacher")]
+    [Authorize(Roles = StaffRoles)]
+    public async Task<ActionResult<CourseSessionDto>> SubstituteTeacher(Guid id, SubstituteTeacherRequest request, CancellationToken cancellationToken)
+    {
+        var command = new SubstituteSessionTeacherCommand(id, request.NewTeacherId, request.Override, request.OverrideReason);
+        var result = await _mediator.Send(command, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("api/sessions/{id:guid}/attendance")]
     [Authorize(Roles = ViewRoles)]
     public async Task<ActionResult<List<AttendanceRecordDto>>> GetAttendance(Guid id, CancellationToken cancellationToken)
@@ -80,4 +90,5 @@ public class SessionsController : ControllerBase
 
 public record CreateSessionRequest(Guid RoomId, Guid TeacherId, DateTime StartUtc, DateTime EndUtc, bool Override, string? OverrideReason);
 public record CancelSessionRequest(Guid? RescheduledToSessionId);
+public record SubstituteTeacherRequest(Guid NewTeacherId, bool Override, string? OverrideReason);
 public record MarkAttendanceRequest(Guid StudentId, AttendanceStatus Status);
