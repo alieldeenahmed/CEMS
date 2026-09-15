@@ -24,3 +24,6 @@ dist-ssr/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local database backups (never committed -- see README "Local backups")
+Backend/backups/

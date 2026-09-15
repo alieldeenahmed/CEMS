@@ -202,6 +202,40 @@ This is a starting set, not full coverage — it exists because these are
 the rules that were hardest to get right the first time, not because
 everything else is untested by design.
 
+## Local backups
+
+Not hosted anywhere yet, so there's no managed provider taking automatic
+backups for you (see "Hosting" below for what that looks like once there
+is one). Until then:
+
+```powershell
+./scripts/backup-database.ps1
+```
+
+Reads the connection string the same way the app does — straight out of
+the local `dotnet user-secrets` store, nothing extra to configure — and
+writes a Postgres custom-format (`-Fc`) dump to `Backend/backups/`
+(gitignored; backups are never committed). To restore:
+
+```powershell
+./scripts/restore-database.ps1 -BackupFile Backend/backups/cems_2026-09-15_162557.dump
+```
+
+Restores into a separate `<database>_restore_test` database by default —
+**not** your real one — so running it can't accidentally clobber live
+data. Pass `-Overwrite` to instead restore directly onto the real database
+name, which does replace everything currently in it.
+
+An untested backup script is a guess, not a backup. Both scripts were
+actually run end-to-end before being written up here: backed up the real
+`cems` database, restored it into the scratch database, and confirmed row
+counts matched exactly across every table (students, sessions, grades,
+invoices, payments, payroll runs, ...) before dropping the scratch
+database again.
+
+Nothing runs this on a schedule — it's a script you run yourself, not an
+automated job. Say if you want that added (e.g. a Windows Scheduled Task).
+
 ## Progress
 
 - [x] Backend solution scaffold (4 Clean Architecture projects)
@@ -382,9 +416,10 @@ in priority order:
   the trickiest business rules — see "Testing" below. Still no frontend
   tests, and backend coverage is a starting set (the hardest rules to get
   right), not the whole app.
-- No backup/disaster-recovery story for local development — see "Local
-  backups" below for the fix while this stays unhosted. Once this is
-  actually deployed, that's a separate story (a managed host's own
+- ~~No backup/disaster-recovery story.~~ Fixed for local development —
+  see "Local backups" below; both the backup and the restore path are
+  actually proven, not just assumed to work. Once this is actually
+  deployed, that becomes a separate story (a managed host's own
   backup/PITR, e.g. Neon — see "Hosting").
 
 **Needed soon, not day-one:**
