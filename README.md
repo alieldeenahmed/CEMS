@@ -17,6 +17,9 @@ over HTTP.
 - MediatR (CQRS), FluentValidation
 - QuestPDF (report card / dashboard PDF generation)
 - ClosedXML (dashboard Excel export)
+- xUnit (`Backend/tests/CEMS.Application.Tests`) — handler unit tests
+  against a real EF Core `ApplicationDbContext` backed by SQLite
+  in-memory, not mocks; see "Testing" below
 
 **Frontend** (`Frontend/`)
 - React 19 + Vite + TypeScript
@@ -158,6 +161,46 @@ dotnet run --project Backend/src/CEMS.Api
 ```
 
 Prints every demo account's email at the end (all passwords: `DemoPass123`).
+
+## Testing
+
+```bash
+dotnet test Backend/tests/CEMS.Application.Tests/CEMS.Application.Tests.csproj
+```
+
+`CEMS.Application.Tests` covers the handlers with the trickiest business
+rules — the ones most likely to regress silently if touched later without
+someone re-testing every role by hand, which is how every rule in this
+README was actually verified during development:
+
+- `MarkAttendanceCommandHandler` — can't mark a future session, can't mark
+  more than 4h after it ends, branch/session-teacher access
+- `TransferStudentBranchCommandHandler` — same-branch guard, history row
+  written correctly, access checked against the student's *current* branch
+- `GeneratePayrollRunCommandHandler` — all four `PayType`s (Hourly,
+  PerSession, Fixed, Percentage), cancelled sessions unpaid,
+  payments-outside-the-period ignored, overlapping-period guard
+- `ResetStaffPasswordCommandHandler` — including a regression test for the
+  bug caught during manual verification: a Teacher's branch comes from
+  `TeacherBranch`, not `UserBranchAssignments` (always empty for a Teacher),
+  so a BranchManager resetting a same-branch teacher has to fall back to
+  the right table
+- `SubstituteSessionTeacherCommandHandler` — conflict detection, the
+  Owner/BranchManager-only override split, and the cancelled/already-started
+  session guards
+
+Each test runs against a real `ApplicationDbContext` on a fresh SQLite
+in-memory database (`Microsoft.Data.Sqlite`, schema built from the actual
+EF model) rather than a mocked `IApplicationDbContext` — the same class of
+EF query-translation bug this project has hit before (see "Architecture
+notes") would slip straight past a mock. `ICurrentUserService` and
+`IIdentityService` are simple hand-written fakes (`TestSupport/`), not a
+mocking library, since both interfaces are small enough that a fake is
+clearer than a mock setup.
+
+This is a starting set, not full coverage — it exists because these are
+the rules that were hardest to get right the first time, not because
+everything else is untested by design.
 
 ## Progress
 
@@ -335,12 +378,14 @@ in priority order:
   front desk got logged out mid-shift.~~ Fixed — `Jwt:ExpiryMinutes` is now
   360 (6h), long enough for a full shift; still no refresh token, so it's
   still a hard logout at that point, not a silent renewal.
-- Zero automated tests, backend or frontend. Every behavior described in
-  this README was verified by hand (curl + browser) during development —
-  fine while building, not a safe way to change code once real data is in
-  it.
-- No backup/disaster-recovery story — it's whatever Postgres instance you
-  point `ConnectionStrings__Default` at, with no documented restore path.
+- ~~Zero automated tests.~~ Backend now has a real xUnit suite covering
+  the trickiest business rules — see "Testing" below. Still no frontend
+  tests, and backend coverage is a starting set (the hardest rules to get
+  right), not the whole app.
+- No backup/disaster-recovery story for local development — see "Local
+  backups" below for the fix while this stays unhosted. Once this is
+  actually deployed, that's a separate story (a managed host's own
+  backup/PITR, e.g. Neon — see "Hosting").
 
 **Needed soon, not day-one:**
 - Single-timezone only (see "Architecture notes" above) — fine for one
