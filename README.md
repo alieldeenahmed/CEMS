@@ -275,9 +275,17 @@ ready to hand to a real center as-is. Checked, not guessed — concrete gaps,
 in priority order:
 
 **Would break in week one:**
-- No password reset, anywhere. `AuthController` only has `login` and
-  `bootstrap-owner` — no self-service reset, no admin-assisted reset. A
-  locked-out staff member currently needs a direct database edit.
+- ~~No password reset, anywhere.~~ Fixed, admin-assisted (no email
+  involved): `POST /api/users/staff/{id}/reset-password` sets a new
+  password directly. Owner can reset anyone; BranchManager can reset a
+  Teacher or FrontDesk at their own branch only — same boundary
+  `CreateStaffUser` already enforces. A Teacher's branch for this check
+  comes from their Teacher profile (`TeacherBranch`), not
+  `UserBranchAssignments` (that table is only populated for
+  FrontDesk/BranchManager at account creation, so it's always empty for a
+  Teacher — caught and fixed before shipping). True self-service
+  ("forgot password" via email) is still not built — it depends on the
+  email gap below.
 - ~~JWT access tokens expire after 60 minutes with no refresh token, so
   front desk got logged out mid-shift.~~ Fixed — `Jwt:ExpiryMinutes` is now
   360 (6h), long enough for a full shift; still no refresh token, so it's

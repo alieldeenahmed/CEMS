@@ -4,6 +4,7 @@ using CEMS.Application.Payroll.Queries.GetMyStaffPayrollRuns;
 using CEMS.Application.Payroll.Queries.GetStaffPayrollRunsForUser;
 using CEMS.Application.Users;
 using CEMS.Application.Users.Commands.CreateStaffUser;
+using CEMS.Application.Users.Commands.ResetStaffPassword;
 using CEMS.Application.Users.Commands.SetStaffUserActive;
 using CEMS.Application.Users.Queries.GetStaffUsers;
 using CEMS.Domain.Users;
@@ -50,6 +51,14 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("staff/{id:guid}/reset-password")]
+    [Authorize(Roles = RoleNames.Owner + "," + RoleNames.BranchManager)]
+    public async Task<IActionResult> ResetStaffPassword(Guid id, ResetStaffPasswordRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new ResetStaffPasswordCommand(id, request.NewPassword), cancellationToken);
+        return NoContent();
+    }
+
     // Front Desk and Branch Manager work isn't tracked in sessions like a Teacher's, so their
     // payroll runs carry a manually-entered amount instead of an auto-computed one.
     [HttpGet("staff/{id:guid}/payroll-runs")]
@@ -81,3 +90,4 @@ public class UsersController : ControllerBase
 public record GenerateStaffPayrollRunRequest(DateOnly PeriodStart, DateOnly PeriodEnd, decimal Amount);
 
 public record SetStaffUserActiveRequest(bool IsActive);
+public record ResetStaffPasswordRequest(string NewPassword);

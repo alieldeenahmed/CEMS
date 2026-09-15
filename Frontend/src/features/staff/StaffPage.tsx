@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { KeyRound, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useBranches } from '@/features/branches/api'
 import { Button } from '@/shared/ui/Button'
@@ -6,6 +6,8 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { SearchInput } from '@/shared/ui/SearchInput'
 import { useSetStaffUserActive, useStaffUsers } from './api'
 import { CreateStaffModal } from './CreateStaffModal'
+import { ResetPasswordModal } from './ResetPasswordModal'
+import type { StaffUser } from './types'
 
 const ROLE_LABELS: Record<string, string> = {
   Owner: 'Owner',
@@ -19,6 +21,7 @@ export function StaffPage() {
   const { data: branches } = useBranches()
   const setActive = useSetStaffUserActive()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [resetPasswordUser, setResetPasswordUser] = useState<StaffUser | null>(null)
   const [search, setSearch] = useState('')
 
   const branchNameById = new Map(branches?.map((branch) => [branch.id, branch.name]))
@@ -88,6 +91,15 @@ export function StaffPage() {
                 {user.isActive ? 'Active' : 'Inactive'}
               </span>
 
+              <button
+                type="button"
+                aria-label={`Reset password for ${user.fullName}`}
+                onClick={() => setResetPasswordUser(user)}
+                className="text-muted transition-colors hover:text-navy"
+              >
+                <KeyRound size={15} />
+              </button>
+
               <Button
                 variant="secondary"
                 onClick={() => setActive.mutate({ userId: user.userId, isActive: !user.isActive })}
@@ -106,6 +118,9 @@ export function StaffPage() {
       )}
 
       {isCreateOpen && <CreateStaffModal onClose={() => setIsCreateOpen(false)} />}
+      {resetPasswordUser && (
+        <ResetPasswordModal user={resetPasswordUser} onClose={() => setResetPasswordUser(null)} />
+      )}
     </div>
   )
 }

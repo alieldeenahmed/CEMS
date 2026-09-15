@@ -100,6 +100,26 @@ public class IdentityService : IIdentityService
         await _userManager.UpdateAsync(user);
     }
 
+    public async Task<ResetPasswordResult> ResetPasswordAsync(Guid userId, string newPassword)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException(nameof(ApplicationUser), userId);
+
+        var removeResult = await _userManager.RemovePasswordAsync(user);
+        if (!removeResult.Succeeded)
+        {
+            return new ResetPasswordResult(false, removeResult.Errors.Select(e => e.Description).ToList());
+        }
+
+        var addResult = await _userManager.AddPasswordAsync(user, newPassword);
+        if (!addResult.Succeeded)
+        {
+            return new ResetPasswordResult(false, addResult.Errors.Select(e => e.Description).ToList());
+        }
+
+        return new ResetPasswordResult(true, Array.Empty<string>());
+    }
+
     public Task<bool> AnyUsersExistAsync() => _context.Users.AnyAsync();
 
     private async Task<AuthenticatedUser> BuildAuthenticatedUserAsync(ApplicationUser user)

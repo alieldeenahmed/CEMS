@@ -14,9 +14,12 @@ public interface IIdentityService
 
     Task SetUserActiveAsync(Guid userId, bool isActive);
 
+    Task<ResetPasswordResult> ResetPasswordAsync(Guid userId, string newPassword);
+
     Task<bool> AnyUsersExistAsync();
 }
 
 public record CreateUserResult(bool Succeeded, Guid UserId, IReadOnlyList<string> Errors);
+public record ResetPasswordResult(bool Succeeded, IReadOnlyList<string> Errors);
 
 public record AuthenticatedUser(Guid UserId, string Email, string FullName, IReadOnlyList<string> Roles, IReadOnlyList<Guid> BranchIds, bool IsActive);

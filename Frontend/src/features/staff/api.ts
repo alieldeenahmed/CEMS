@@ -23,6 +23,14 @@ export function useCreateStaffUser() {
   })
 }
 
+export function useResetStaffPassword() {
+  return useMutation({
+    mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
+      await apiClient.post(`/users/staff/${userId}/reset-password`, { newPassword })
+    },
+  })
+}
+
 export function useSetStaffUserActive() {
   const queryClient = useQueryClient()
   return useMutation({
