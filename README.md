@@ -7,6 +7,41 @@ attendance, exams/grades, payments, and payroll.
 Backend and frontend are fully separate — no shared code — and communicate only
 over HTTP.
 
+## About this project
+
+CEMS is a solo-built, full-stack system for running a multi-branch educational
+center day to day: enrolling students, scheduling recurring class sessions
+across rooms and teachers, tracking attendance and grades, running payroll,
+and handling the messy real-world cases — a student transferring branches, a
+teacher needing a one-off substitute, a Branch Manager who should only ever
+see their own branch's data.
+
+It's built to the standard I'd want in a real job, not a demo: role-based
+access control enforced at both the API and handler level (not just hidden in
+the UI), a proper Clean Architecture split with CQRS, a normalized schema with
+real migrations — including a manual data-preserving migration when a
+mid-project schema change needed one — and backend and frontend test suites
+that exercise real behavior instead of mocking everything away. Everything
+below (architecture, roles, testing, local setup) describes the actual state
+of the code, not an aspirational plan.
+
+### Screenshots
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/dashboard.png" alt="Owner dashboard"/><br/><sub>Owner dashboard — revenue, attendance, and enrollment at a glance</sub></td>
+<td width="50%"><img src="docs/screenshots/students.png" alt="Students list"/><br/><sub>Students — branch-scoped roster</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/teachers.png" alt="Teacher profile"/><br/><sub>Teacher profile — branches, availability, declared qualifications</sub></td>
+<td width="50%"><img src="docs/screenshots/scheduling.png" alt="Scheduling"/><br/><sub>Scheduling — sessions with a live teacher substitution</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/payroll.png" alt="Payroll"/><br/><sub>Payroll — generated runs, draft and paid</sub></td>
+<td width="50%"><img src="docs/screenshots/analytics.png" alt="Analytics"/><br/><sub>Analytics — revenue, attendance, and teacher utilization</sub></td>
+</tr>
+</table>
+
 ## Tech stack
 
 **Backend** (`Backend/`)
