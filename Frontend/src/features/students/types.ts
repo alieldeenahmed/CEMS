@@ -50,3 +50,20 @@ export interface LinkGuardianInput {
   relationshipType: RelationshipType
   isPrimaryContact: boolean
 }
+
+export interface StudentBranchHistoryEntry {
+  id: string
+  studentId: string
+  fromBranchId: string
+  fromBranchName: string
+  toBranchId: string
+  toBranchName: string
+  transferDate: string
+  reason: string | null
+  transferredByUserId: string | null
+}
+
+export interface TransferBranchInput {
+  newBranchId: string
+  reason: string | null
+}

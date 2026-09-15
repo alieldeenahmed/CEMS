@@ -19,6 +19,7 @@ public interface IApplicationDbContext
     DbSet<Student> Students { get; }
     DbSet<Guardian> Guardians { get; }
     DbSet<StudentGuardian> StudentGuardians { get; }
+    DbSet<StudentBranchHistory> StudentBranchHistories { get; }
     DbSet<Teacher> Teachers { get; }
     DbSet<TeacherBranch> TeacherBranches { get; }
     DbSet<TeacherAvailability> TeacherAvailabilities { get; }

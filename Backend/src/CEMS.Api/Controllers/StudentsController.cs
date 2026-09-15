@@ -14,7 +14,9 @@ using CEMS.Application.Students.Commands.CreateStudent;
 using CEMS.Application.Students.Commands.DeleteStudent;
 using CEMS.Application.Students.Commands.LinkGuardian;
 using CEMS.Application.Students.Commands.UnlinkGuardian;
+using CEMS.Application.Students.Commands.TransferStudentBranch;
 using CEMS.Application.Students.Commands.UpdateStudent;
+using CEMS.Application.Students.Queries.GetBranchHistoryForStudent;
 using CEMS.Application.Students.Queries.GetGuardiansForStudent;
 using CEMS.Application.Students.Queries.GetStudentById;
 using CEMS.Application.Students.Queries.GetStudents;
@@ -80,6 +82,22 @@ public class StudentsController : ControllerBase
     {
         await _mediator.Send(new DeleteStudentCommand(id), cancellationToken);
         return NoContent();
+    }
+
+    [HttpPost("{id:guid}/transfer-branch")]
+    [Authorize(Roles = ManageRoles)]
+    public async Task<ActionResult<StudentDto>> TransferBranch(Guid id, TransferBranchRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new TransferStudentBranchCommand(id, request.NewBranchId, request.Reason), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/branch-history")]
+    [Authorize(Roles = ViewRoles)]
+    public async Task<ActionResult<List<StudentBranchHistoryDto>>> GetBranchHistory(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetBranchHistoryForStudentQuery(id), cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{id:guid}/guardians")]
@@ -166,5 +184,6 @@ public class StudentsController : ControllerBase
 }
 
 public record UpdateStudentRequest(string FullName, DateOnly DateOfBirth, Gender Gender, StudentStatus Status);
+public record TransferBranchRequest(Guid NewBranchId, string? Reason);
 public record LinkGuardianRequest(Guid GuardianId, RelationshipType RelationshipType, bool IsPrimaryContact);
 public record CreateInvoiceRequest(Guid? PackageId, decimal? Amount, DateOnly DueDate);

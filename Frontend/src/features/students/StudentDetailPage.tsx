@@ -1,5 +1,5 @@
-import { ArrowLeft } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { ArrowLeft, ArrowRightLeft } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ROLES } from '@/features/auth/constants'
@@ -8,9 +8,11 @@ import { useAttendanceForStudent } from '@/features/attendance/api'
 import { useEnrollmentsForStudent } from '@/features/courses/api'
 import { useGradesForStudent } from '@/features/exams/api'
 import { formatUtcForDisplay } from '@/features/scheduling/time'
+import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
-import { useStudent } from './api'
+import { useBranchHistoryForStudent, useStudent } from './api'
 import { GuardiansSection } from './GuardiansSection'
+import { TransferBranchModal } from './TransferBranchModal'
 
 const STUDENT_STATUS_CLASSES: Record<string, string> = {
   Active: 'bg-teal/10 text-teal',
@@ -49,11 +51,16 @@ export function StudentDetailPage() {
   const { hasRole } = useAuth()
   const canViewFull = hasRole(ROLES.Owner, ROLES.BranchManager, ROLES.FrontDesk)
 
+  const [isTransferOpen, setIsTransferOpen] = useState(false)
+
   const { data: student, isLoading, isError } = useStudent(id ?? null)
   const { data: branches } = useBranches({ enabled: canViewFull })
   const { data: enrollments, isLoading: enrollmentsLoading } = useEnrollmentsForStudent(id ?? null)
   const { data: attendance, isLoading: attendanceLoading } = useAttendanceForStudent(id ?? null)
   const { data: grades, isLoading: gradesLoading } = useGradesForStudent(id ?? null)
+  const { data: branchHistory, isLoading: branchHistoryLoading } = useBranchHistoryForStudent(
+    canViewFull ? id ?? null : null,
+  )
 
   const branchNameById = new Map(branches?.map((b) => [b.id, b.name]))
 
@@ -84,17 +91,54 @@ export function StudentDetailPage() {
             : `${student.gender} · born ${student.dateOfBirth}`
         }
         action={
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STUDENT_STATUS_CLASSES[student.status]}`}
-          >
-            {student.status}
-          </span>
+          <div className="flex items-center gap-3">
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STUDENT_STATUS_CLASSES[student.status]}`}
+            >
+              {student.status}
+            </span>
+            {canViewFull && (
+              <Button variant="secondary" onClick={() => setIsTransferOpen(true)}>
+                <ArrowRightLeft size={15} />
+                Transfer branch
+              </Button>
+            )}
+          </div>
         }
       />
 
       {canViewFull && (
         <SectionCard title="Guardians">
           <GuardiansSection studentId={student.id} />
+        </SectionCard>
+      )}
+
+      {canViewFull && (
+        <SectionCard title="Branch history">
+          {branchHistoryLoading && <p className="px-4 py-4 text-sm text-muted">Loading branch history...</p>}
+          {branchHistory && branchHistory.length === 0 && (
+            <p className="px-4 py-4 text-sm text-muted">Never transferred branches.</p>
+          )}
+          {branchHistory && branchHistory.length > 0 && (
+            <div>
+              {branchHistory.map((entry, index) => (
+                <div
+                  key={entry.id}
+                  className={`flex items-center gap-3 px-4 py-3 ${index > 0 ? 'border-t border-line' : ''}`}
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-ink">
+                      {entry.fromBranchName} → {entry.toBranchName}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {entry.transferDate}
+                      {entry.reason ? ` · ${entry.reason}` : ''}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </SectionCard>
       )}
 
@@ -177,6 +221,8 @@ export function StudentDetailPage() {
           </div>
         )}
       </SectionCard>
+
+      {isTransferOpen && <TransferBranchModal student={student} onClose={() => setIsTransferOpen(false)} />}
     </div>
   )
 }

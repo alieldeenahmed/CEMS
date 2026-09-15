@@ -6,6 +6,8 @@ import type {
   Guardian,
   LinkGuardianInput,
   Student,
+  StudentBranchHistoryEntry,
+  TransferBranchInput,
   UpdateStudentInput,
 } from './types'
 
@@ -59,6 +61,32 @@ export function useDeleteStudent() {
       await apiClient.delete(`/students/${id}`)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['students'] }),
+  })
+}
+
+export function useBranchHistoryForStudent(studentId: string | null) {
+  return useQuery({
+    queryKey: ['student-branch-history', studentId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<StudentBranchHistoryEntry[]>(`/students/${studentId}/branch-history`)
+      return data
+    },
+    enabled: !!studentId,
+  })
+}
+
+export function useTransferStudentBranch(studentId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: TransferBranchInput) => {
+      const { data } = await apiClient.post<Student>(`/students/${studentId}/transfer-branch`, input)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['student', studentId] })
+      queryClient.invalidateQueries({ queryKey: ['student-branch-history', studentId] })
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+    },
   })
 }
 

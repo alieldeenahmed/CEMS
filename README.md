@@ -285,8 +285,16 @@ Prints every demo account's email at the end (all passwords: `DemoPass123`).
       student can't be created without a guardian attached at creation time
       (existing or new, atomic with the student row) — front desk used to
       be able to add one with no contact on file at all.
-- [ ] Student branch transfer with history (`StudentBranchHistory`) —
-      deliberately deferred until it's the thing being built, not bare CRUD
+- [x] Student branch transfer with history: `POST /students/{id}/transfer-branch`
+      (Owner/BranchManager/FrontDesk, access checked against the student's
+      *current* branch) updates `Student.CurrentBranchId` and records a
+      `StudentBranchHistory` row (from branch, to branch, date, optional
+      reason, who did it) — access to a student follows them to their new
+      branch immediately, same as everywhere else non-Owner access is
+      branch-scoped, so the old branch's manager loses visibility the
+      moment a transfer completes and the new branch's manager gains it.
+      Surfaced on the student detail page as a "Transfer branch" action
+      plus a branch history list.
 - [ ] Declared teacher qualification (which courses/curricula a teacher is
       qualified to teach, as opposed to what `CourseSession.TeacherId`
       already tracks as actually scheduled) — still deferred; no module has
@@ -342,8 +350,8 @@ no-parent-portal decision) and Docker/containerization (this deploys via
 whatever the host builds natively — Railway's Nixpacks or Azure App
 Service's native .NET runtime — rather than a Dockerfile; see "Hosting").
 
-**Can wait:** CI/CD, and the two items already deferred above
-(`StudentBranchHistory`, declared teacher qualification).
+**Can wait:** CI/CD, and declared teacher qualification (still deferred —
+see the Progress list above).
 
 Turning this into a real multi-tenant product (selling to many *unrelated*
 centers, not just one center with several branches) would be a materially
