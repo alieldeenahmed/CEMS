@@ -43,7 +43,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Organization',
     items: [
       { label: 'Branches', path: '/branches', icon: Building2, roles: [ROLES.Owner] },
-      { label: 'Staff', path: '/staff', icon: ShieldCheck, roles: [ROLES.Owner] },
+      { label: 'Staff', path: '/staff', icon: ShieldCheck, roles: [ROLES.Owner, ROLES.BranchManager] },
     ],
   },
   {

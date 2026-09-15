@@ -1,10 +1,12 @@
 import { KeyRound, Plus } from 'lucide-react'
 import { useState } from 'react'
+import { useAuth } from '@/features/auth/AuthContext'
+import { ROLES } from '@/features/auth/constants'
 import { useBranches } from '@/features/branches/api'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { SearchInput } from '@/shared/ui/SearchInput'
-import { useSetStaffUserActive, useStaffUsers } from './api'
+import { useBranchStaff, useSetStaffUserActive, useStaffUsers } from './api'
 import { CreateStaffModal } from './CreateStaffModal'
 import { ResetPasswordModal } from './ResetPasswordModal'
 import type { StaffUser } from './types'
@@ -17,7 +19,14 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 export function StaffPage() {
-  const { data: staff, isLoading, isError } = useStaffUsers()
+  const { user, hasRole } = useAuth()
+  const isOwner = hasRole(ROLES.Owner)
+  const isBranchManager = hasRole(ROLES.BranchManager)
+
+  const ownerStaffQuery = useStaffUsers({ enabled: isOwner })
+  const branchStaffQuery = useBranchStaff({ enabled: isBranchManager && !isOwner })
+  const { data: staff, isLoading, isError } = isOwner ? ownerStaffQuery : branchStaffQuery
+
   const { data: branches } = useBranches()
   const setActive = useSetStaffUserActive()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -34,7 +43,11 @@ export function StaffPage() {
     <div>
       <PageHeader
         title="Staff"
-        description="Branch managers, front desk, and teacher accounts."
+        description={
+          isOwner
+            ? 'Branch managers, front desk, and teacher accounts.'
+            : 'Front desk and teacher accounts at your branch.'
+        }
         action={
           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus size={15} />
@@ -56,18 +69,18 @@ export function StaffPage() {
 
       {filteredStaff && (
         <div className="overflow-hidden rounded-lg border border-line bg-paper">
-          {filteredStaff.map((user, index) => (
+          {filteredStaff.map((staffMember, index) => (
             <div
-              key={user.userId}
+              key={staffMember.userId}
               className={`flex items-center gap-3 px-4 py-3 ${index > 0 ? 'border-t border-line' : ''}`}
             >
               <div className="flex-1">
-                <p className="text-sm font-medium text-ink">{user.fullName}</p>
-                <p className="text-xs text-muted">{user.email}</p>
+                <p className="text-sm font-medium text-ink">{staffMember.fullName}</p>
+                <p className="text-xs text-muted">{staffMember.email}</p>
               </div>
 
               <div className="flex flex-wrap gap-1">
-                {user.roles.map((role) => (
+                {staffMember.roles.map((role) => (
                   <span
                     key={role}
                     className="rounded-full bg-navy/10 px-2.5 py-0.5 text-xs font-medium text-navy"
@@ -78,34 +91,36 @@ export function StaffPage() {
               </div>
 
               <p className="w-40 text-xs text-muted">
-                {user.branchIds.length > 0
-                  ? user.branchIds.map((id) => branchNameById.get(id) ?? 'Unknown').join(', ')
+                {staffMember.branchIds.length > 0
+                  ? staffMember.branchIds.map((id) => branchNameById.get(id) ?? 'Unknown').join(', ')
                   : 'All branches'}
               </p>
 
               <span
                 className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  user.isActive ? 'bg-teal/10 text-teal' : 'bg-muted/10 text-muted'
+                  staffMember.isActive ? 'bg-teal/10 text-teal' : 'bg-muted/10 text-muted'
                 }`}
               >
-                {user.isActive ? 'Active' : 'Inactive'}
+                {staffMember.isActive ? 'Active' : 'Inactive'}
               </span>
 
               <button
                 type="button"
-                aria-label={`Reset password for ${user.fullName}`}
-                onClick={() => setResetPasswordUser(user)}
+                aria-label={`Reset password for ${staffMember.fullName}`}
+                onClick={() => setResetPasswordUser(staffMember)}
                 className="text-muted transition-colors hover:text-navy"
               >
                 <KeyRound size={15} />
               </button>
 
-              <Button
-                variant="secondary"
-                onClick={() => setActive.mutate({ userId: user.userId, isActive: !user.isActive })}
-              >
-                {user.isActive ? 'Deactivate' : 'Activate'}
-              </Button>
+              {isOwner && (
+                <Button
+                  variant="secondary"
+                  onClick={() => setActive.mutate({ userId: staffMember.userId, isActive: !staffMember.isActive })}
+                >
+                  {staffMember.isActive ? 'Deactivate' : 'Activate'}
+                </Button>
+              )}
             </div>
           ))}
 
@@ -117,7 +132,16 @@ export function StaffPage() {
         </div>
       )}
 
-      {isCreateOpen && <CreateStaffModal onClose={() => setIsCreateOpen(false)} />}
+      {isCreateOpen &&
+        (isOwner ? (
+          <CreateStaffModal onClose={() => setIsCreateOpen(false)} />
+        ) : (
+          <CreateStaffModal
+            onClose={() => setIsCreateOpen(false)}
+            allowedRoles={['FrontDesk', 'Teacher']}
+            lockedBranchId={user?.branchIds[0]}
+          />
+        ))}
       {resetPasswordUser && (
         <ResetPasswordModal user={resetPasswordUser} onClose={() => setResetPasswordUser(null)} />
       )}

@@ -6,6 +6,7 @@ using CEMS.Application.Users;
 using CEMS.Application.Users.Commands.CreateStaffUser;
 using CEMS.Application.Users.Commands.ResetStaffPassword;
 using CEMS.Application.Users.Commands.SetStaffUserActive;
+using CEMS.Application.Users.Queries.GetBranchStaff;
 using CEMS.Application.Users.Queries.GetStaffUsers;
 using CEMS.Domain.Users;
 using MediatR;
@@ -40,6 +41,17 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<StaffUserDto>> CreateStaffUser(CreateStaffUserCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
+        return Ok(result);
+    }
+
+    // Owner uses GetStaffUsers (org-wide, every role). A Branch Manager gets only the Teacher and
+    // FrontDesk accounts at their own branch -- never other Branch Managers, Owner, or another
+    // branch's staff -- the same boundary CreateStaffUser and ResetStaffPassword already enforce.
+    [HttpGet("staff/my-branch")]
+    [Authorize(Roles = RoleNames.BranchManager)]
+    public async Task<ActionResult<List<StaffUserDto>>> GetBranchStaff(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetBranchStaffQuery(), cancellationToken);
         return Ok(result);
     }
 

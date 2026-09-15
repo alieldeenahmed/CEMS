@@ -162,7 +162,18 @@ Prints every demo account's email at the end (all passwords: `DemoPass123`).
       first account only — see "Local setup" below)
 - [x] Branch/Room CRUD endpoints, branch-scoped RBAC
 - [x] Admin endpoint for creating staff accounts (Owner creates any staff
-      role; BranchManager creates Teacher/FrontDesk for their own branch only)
+      role; BranchManager creates Teacher/FrontDesk for their own branch
+      only) and admin-assisted password reset with the same boundary
+      (`POST /users/staff/{id}/reset-password`, no email involved — an
+      admin sets the password directly and relays it). BranchManager also
+      gets a branch-scoped staff list (`GET /users/staff/my-branch`) —
+      Teacher and FrontDesk at their own branch only, never another
+      BranchManager, Owner, or another branch's staff. A Teacher's branch
+      for all three of these comes from their Teacher profile
+      (`TeacherBranch`), not `UserBranchAssignments` — that table is only
+      populated for FrontDesk/BranchManager at account creation, so it's
+      always empty for a Teacher, a subtlety caught and fixed in each case
+      before shipping.
 - [x] Student Management: Student/Guardian CRUD, student-guardian linking,
       branch-scoped RBAC. Guardians are plain contact records (name/phone/
       email/relationship/primary-contact) with no login — CEMS has no

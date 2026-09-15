@@ -11,6 +11,12 @@ import { useCreateStaffUser } from './api'
 const STAFF_ROLES = ['BranchManager', 'FrontDesk', 'Teacher'] as const
 const BRANCH_SCOPED_ROLES: string[] = ['BranchManager', 'FrontDesk']
 
+const ROLE_LABELS: Record<(typeof STAFF_ROLES)[number], string> = {
+  BranchManager: 'Branch Manager',
+  FrontDesk: 'Front Desk',
+  Teacher: 'Teacher',
+}
+
 const staffSchema = z
   .object({
     email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
@@ -27,8 +33,16 @@ const staffSchema = z
 
 type StaffFormValues = z.infer<typeof staffSchema>
 
-export function CreateStaffModal({ onClose }: { onClose: () => void }) {
-  const { data: branches } = useBranches()
+interface CreateStaffModalProps {
+  onClose: () => void
+  /** Restricts the assignable roles -- e.g. a Branch Manager can create Teacher/FrontDesk but not BranchManager. */
+  allowedRoles?: readonly (typeof STAFF_ROLES)[number][]
+  /** When set, the branch is fixed to this id and no branch picker is shown -- for a Branch Manager, who only manages one branch. */
+  lockedBranchId?: string
+}
+
+export function CreateStaffModal({ onClose, allowedRoles = STAFF_ROLES, lockedBranchId }: CreateStaffModalProps) {
+  const { data: branches } = useBranches({ enabled: !lockedBranchId })
   const createStaffUser = useCreateStaffUser()
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -39,11 +53,12 @@ export function CreateStaffModal({ onClose }: { onClose: () => void }) {
     formState: { errors, isSubmitting },
   } = useForm<StaffFormValues>({
     resolver: zodResolver(staffSchema),
-    defaultValues: { role: 'BranchManager' },
+    defaultValues: { role: allowedRoles[0] },
   })
 
   const role = watch('role')
   const isBranchScoped = BRANCH_SCOPED_ROLES.includes(role)
+  const showBranchPicker = isBranchScoped && !lockedBranchId
 
   async function onSubmit(values: StaffFormValues) {
     setServerError(null)
@@ -54,7 +69,7 @@ export function CreateStaffModal({ onClose }: { onClose: () => void }) {
         fullName: values.fullName,
         phoneNumber: values.phoneNumber,
         role: values.role,
-        branchId: isBranchScoped ? (values.branchId ?? null) : null,
+        branchId: isBranchScoped ? (lockedBranchId ?? values.branchId ?? null) : null,
       })
       onClose()
     } catch {
@@ -80,12 +95,14 @@ export function CreateStaffModal({ onClose }: { onClose: () => void }) {
         />
 
         <Select label="Role" {...register('role')}>
-          <option value="BranchManager">Branch Manager</option>
-          <option value="FrontDesk">Front Desk</option>
-          <option value="Teacher">Teacher</option>
+          {allowedRoles.map((allowedRole) => (
+            <option key={allowedRole} value={allowedRole}>
+              {ROLE_LABELS[allowedRole]}
+            </option>
+          ))}
         </Select>
 
-        {isBranchScoped && (
+        {showBranchPicker && (
           <Select label="Branch" {...register('branchId')} error={errors.branchId?.message}>
             <option value="">Select a branch</option>
             {branches?.map((branch) => (
