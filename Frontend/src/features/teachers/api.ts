@@ -7,6 +7,7 @@ import type {
   Teacher,
   TeacherAvailability,
   TeacherCandidate,
+  TeacherCourseQualification,
   UpdateTeacherInput,
 } from './types'
 
@@ -124,5 +125,36 @@ export function useRemoveAvailability(teacherId: string) {
       await apiClient.delete(`/teachers/availability/${availabilityId}`)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['teacher-availability', teacherId] }),
+  })
+}
+
+export function useQualificationsForTeacher(teacherId: string | null) {
+  return useQuery({
+    queryKey: ['teacher-qualifications', teacherId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<TeacherCourseQualification[]>(`/teachers/${teacherId}/qualifications`)
+      return data
+    },
+    enabled: !!teacherId,
+  })
+}
+
+export function useAddQualification(teacherId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (courseId: string) => {
+      await apiClient.post(`/teachers/${teacherId}/qualifications`, { courseId })
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['teacher-qualifications', teacherId] }),
+  })
+}
+
+export function useRemoveQualification(teacherId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (courseId: string) => {
+      await apiClient.delete(`/teachers/${teacherId}/qualifications/${courseId}`)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['teacher-qualifications', teacherId] }),
   })
 }

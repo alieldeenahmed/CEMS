@@ -10,4 +10,5 @@ public class Teacher
 
     public ICollection<TeacherBranch> TeacherBranches { get; set; } = new List<TeacherBranch>();
     public ICollection<TeacherAvailability> Availabilities { get; set; } = new List<TeacherAvailability>();
+    public ICollection<TeacherCourseQualification> Qualifications { get; set; } = new List<TeacherCourseQualification>();
 }

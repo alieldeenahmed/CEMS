@@ -57,3 +57,9 @@ export interface AddAvailabilityInput {
   startTime: string
   endTime: string
 }
+
+export interface TeacherCourseQualification {
+  teacherId: string
+  courseId: string
+  courseName: string
+}

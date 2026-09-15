@@ -409,10 +409,16 @@ automated job. Say if you want that added (e.g. a Windows Scheduled Task).
       moment a transfer completes and the new branch's manager gains it.
       Surfaced on the student detail page as a "Transfer branch" action
       plus a branch history list.
-- [ ] Declared teacher qualification (which courses/curricula a teacher is
-      qualified to teach, as opposed to what `CourseSession.TeacherId`
-      already tracks as actually scheduled) — still deferred; no module has
-      needed it yet
+- [x] Declared teacher qualification: `TeacherCourseQualification`
+      (Teacher × Course) records which courses a teacher is qualified to
+      teach — distinct from what `CourseSession.TeacherId` tracks as
+      actually scheduled. Owner/BranchManager declare/revoke a
+      qualification (branch-scoped to the course's branch, same access
+      check as branch assignment); anyone who can view the teacher (Owner,
+      branch access, or the teacher viewing their own record) can see the
+      list. Purely a standalone staffing record for now — nothing in
+      scheduling or substitution reads it yet, so declaring or not
+      declaring a qualification changes no other behavior in the app.
 
 ## Production readiness
 
@@ -469,8 +475,7 @@ no-parent-portal decision) and Docker/containerization (this deploys via
 whatever the host builds natively — Railway's Nixpacks or Azure App
 Service's native .NET runtime — rather than a Dockerfile; see "Hosting").
 
-**Can wait:** CI/CD, and declared teacher qualification (still deferred —
-see the Progress list above).
+**Can wait:** CI/CD.
 
 Turning this into a real multi-tenant product (selling to many *unrelated*
 centers, not just one center with several branches) would be a materially

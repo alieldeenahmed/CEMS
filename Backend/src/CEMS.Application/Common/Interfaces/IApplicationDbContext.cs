@@ -23,6 +23,7 @@ public interface IApplicationDbContext
     DbSet<Teacher> Teachers { get; }
     DbSet<TeacherBranch> TeacherBranches { get; }
     DbSet<TeacherAvailability> TeacherAvailabilities { get; }
+    DbSet<TeacherCourseQualification> TeacherCourseQualifications { get; }
     DbSet<Curriculum> Curricula { get; }
     DbSet<Course> Courses { get; }
     DbSet<CourseEnrollment> CourseEnrollments { get; }

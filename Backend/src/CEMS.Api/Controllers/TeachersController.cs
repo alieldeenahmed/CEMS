@@ -1,10 +1,12 @@
 using CEMS.Application.Teachers;
 using CEMS.Application.Teachers.Commands.AddAvailability;
+using CEMS.Application.Teachers.Commands.AddTeacherQualification;
 using CEMS.Application.Teachers.Commands.AddTeacherToBranch;
 using CEMS.Application.Teachers.Commands.CreateTeacher;
 using CEMS.Application.Teachers.Commands.DeleteTeacher;
 using CEMS.Application.Teachers.Commands.RemoveAvailability;
 using CEMS.Application.Teachers.Commands.RemoveTeacherFromBranch;
+using CEMS.Application.Teachers.Commands.RemoveTeacherQualification;
 using CEMS.Application.Teachers.Commands.UpdateTeacher;
 using CEMS.Application.Payroll;
 using CEMS.Application.Payroll.Commands.GeneratePayrollRun;
@@ -14,6 +16,7 @@ using CEMS.Application.Scheduling;
 using CEMS.Application.Scheduling.Queries.GetMySchedule;
 using CEMS.Application.Teachers.Queries.GetAvailabilityForTeacher;
 using CEMS.Application.Teachers.Queries.GetMyTeacherProfile;
+using CEMS.Application.Teachers.Queries.GetQualificationsForTeacher;
 using CEMS.Application.Teachers.Queries.GetTeacherById;
 using CEMS.Application.Teachers.Queries.GetTeacherCandidates;
 using CEMS.Application.Teachers.Queries.GetTeachers;
@@ -146,6 +149,33 @@ public class TeachersController : ControllerBase
         return NoContent();
     }
 
+    // Declares which courses a teacher is qualified to teach -- distinct from CourseSession.TeacherId,
+    // which tracks what they're actually scheduled for. Nothing in scheduling reads this yet; it's a
+    // standalone record for staffing decisions (e.g. picking a substitute) until something needs it.
+    [HttpGet("{id:guid}/qualifications")]
+    [Authorize(Roles = ViewRoles)]
+    public async Task<ActionResult<List<TeacherCourseQualificationDto>>> GetQualifications(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetQualificationsForTeacherQuery(id), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{id:guid}/qualifications")]
+    [Authorize(Roles = BranchManageRoles)]
+    public async Task<IActionResult> AddQualification(Guid id, AddQualificationRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new AddTeacherQualificationCommand(id, request.CourseId), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}/qualifications/{courseId:guid}")]
+    [Authorize(Roles = BranchManageRoles)]
+    public async Task<IActionResult> RemoveQualification(Guid id, Guid courseId, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new RemoveTeacherQualificationCommand(id, courseId), cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("{id:guid}/payroll-runs")]
     [Authorize(Roles = RoleNames.Owner)]
     public async Task<ActionResult<List<PayrollRunDto>>> GetPayrollRunsForTeacher(Guid id, CancellationToken cancellationToken)
@@ -175,4 +205,5 @@ public class TeachersController : ControllerBase
 public record UpdateTeacherRequest(DateOnly HireDate, PayType PayType, decimal PayRate);
 public record AddTeacherToBranchRequest(Guid BranchId);
 public record AddAvailabilityRequest(Guid BranchId, DayOfWeek DayOfWeek, TimeOnly StartTime, TimeOnly EndTime);
+public record AddQualificationRequest(Guid CourseId);
 public record GeneratePayrollRunRequest(DateOnly PeriodStart, DateOnly PeriodEnd);

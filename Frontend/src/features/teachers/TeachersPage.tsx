@@ -8,6 +8,7 @@ import { SearchInput } from '@/shared/ui/SearchInput'
 import { AvailabilitySection } from './AvailabilitySection'
 import { useDeleteTeacher, useTeachers } from './api'
 import { BranchAssignmentsSection } from './BranchAssignmentsSection'
+import { QualificationsSection } from './QualificationsSection'
 import { TeacherFormModal } from './TeacherFormModal'
 import type { PayType, Teacher } from './types'
 
@@ -118,6 +119,7 @@ export function TeachersPage() {
                   <div className="space-y-4 border-t border-line bg-parchment/50 p-4">
                     <BranchAssignmentsSection teacher={teacher} />
                     <AvailabilitySection teacherId={teacher.id} />
+                    <QualificationsSection teacherId={teacher.id} />
                   </div>
                 )}
               </div>
