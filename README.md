@@ -278,8 +278,10 @@ in priority order:
 - No password reset, anywhere. `AuthController` only has `login` and
   `bootstrap-owner` — no self-service reset, no admin-assisted reset. A
   locked-out staff member currently needs a direct database edit.
-- JWT access tokens expire after 60 minutes (`Jwt:ExpiryMinutes`) with no
-  refresh token. Front desk gets silently logged out mid-shift, repeatedly.
+- ~~JWT access tokens expire after 60 minutes with no refresh token, so
+  front desk got logged out mid-shift.~~ Fixed — `Jwt:ExpiryMinutes` is now
+  360 (6h), long enough for a full shift; still no refresh token, so it's
+  still a hard logout at that point, not a silent renewal.
 - Zero automated tests, backend or frontend. Every behavior described in
   this README was verified by hand (curl + browser) during development —
   fine while building, not a safe way to change code once real data is in
