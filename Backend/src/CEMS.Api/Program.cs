@@ -14,6 +14,26 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Fail fast with a clear message rather than crashing deep inside Npgsql/JWT setup, or -- worse, for
+// the key -- silently signing every token with an empty/weak key. Local dev sets these via
+// `dotnet user-secrets` (see README); any other environment sets them as real environment variables
+// (ConnectionStrings__Default, Jwt__Key), which IConfiguration reads the same way either way.
+var connectionString = builder.Configuration.GetConnectionString("Default");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "ConnectionStrings:Default is not configured. Set it with 'dotnet user-secrets set \"ConnectionStrings:Default\" \"<value>\"' " +
+        "for local development, or as the ConnectionStrings__Default environment variable in any other environment.");
+}
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key is not configured or is shorter than 32 characters. Set it with 'dotnet user-secrets set \"Jwt:Key\" \"<value>\"' " +
+        "for local development, or as the Jwt__Key environment variable in any other environment.");
+}
+
 // Add services to the container.
 
 builder.Services.AddControllers(options =>

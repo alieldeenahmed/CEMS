@@ -76,20 +76,30 @@ level — never just hidden in the UI.
 ## Local setup
 
 Requires a local PostgreSQL instance and a `cems` database. The connection
-string is never committed — set it as a user environment variable instead:
+string and JWT signing key are never committed — they're set via .NET's
+built-in [Secret Manager](https://learn.microsoft.com/aspnet/core/security/app-secrets)
+tool, which stores them in a JSON file *outside* the repo entirely
+(`%APPDATA%\Microsoft\UserSecrets\<id>\secrets.json` on Windows), so there's
+no file to accidentally commit and nothing to remember to `.gitignore`. Run
+from `Backend/src/CEMS.Api`:
 
-```powershell
-[System.Environment]::SetEnvironmentVariable("ConnectionStrings__Default", "Host=localhost;Port=5432;Database=cems;Username=postgres;Password=YOUR_PASSWORD", "User")
+```bash
+dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=cems;Username=postgres;Password=YOUR_PASSWORD"
+dotnet user-secrets set "Jwt:Key" "<a long random string, at least 32 characters>"
 ```
 
-The JWT signing key is set the same way — it's a secret, so it's never
-committed either. Any random string works locally:
+`Program.cs` fails fast with a clear error at startup if either is missing
+or the JWT key is too short, rather than crashing deep inside Npgsql/JWT
+setup or — worse — silently signing tokens with an empty key.
 
-```powershell
-[System.Environment]::SetEnvironmentVariable("Jwt__Key", "<a long random string>", "User")
-```
+This only covers local development. Any other environment (a real
+deployment) sets these as real environment variables instead
+(`ConnectionStrings__Default`, `Jwt__Key`) — `IConfiguration` reads both
+sources the same way, so no code change is needed either way; see
+"Hosting" below for where those environment variables actually come from
+per host.
 
-Restart your terminal/IDE afterward, then apply migrations from `Backend/`:
+Apply migrations from `Backend/`:
 
 ```bash
 dotnet ef database update --project src/CEMS.Infrastructure --startup-project src/CEMS.Api
@@ -309,18 +319,26 @@ in priority order:
   point `ConnectionStrings__Default` at, with no documented restore path.
 
 **Needed soon, not day-one:**
-- No email at all — no password-reset mail, no invoice-due reminders,
-  nothing. Front-desk staff will expect this quickly.
 - Single-timezone only (see "Architecture notes" above) — fine for one
   region, breaks the moment a branch is elsewhere.
-- Secrets (connection string, JWT signing key) are user-scoped environment
-  variables — fine for local dev, not for a real deployment; needs a real
-  secrets manager.
+- ~~Secrets are user-scoped environment variables.~~ Fixed for local dev:
+  connection string and JWT key now live in .NET's Secret Manager
+  (`dotnet user-secrets`), stored outside the repo entirely — see "Local
+  setup". `Program.cs` also fails fast with a clear error if either is
+  missing or the key is too short, instead of an unhelpful crash or a
+  silently-weak key. Production still needs a real target before this is
+  fully resolved — see "Hosting".
 - `AutoMapper` is referenced in `CEMS.Application.csproj` but not used
   anywhere — every DTO is hand-constructed. Dead dependency, safe to drop.
 
-**Can wait:** CI/CD, Docker packaging, and the two items already deferred
-above (`StudentBranchHistory`, `TeacherSubject`).
+**Deliberately out of scope, not gaps:** email (no password-reset mail, no
+invoice-due reminders — a deliberate choice, not an oversight, same as the
+no-parent-portal decision) and Docker/containerization (this deploys via
+whatever the host builds natively — Railway's Nixpacks or Azure App
+Service's native .NET runtime — rather than a Dockerfile; see "Hosting").
+
+**Can wait:** CI/CD, and the two items already deferred above
+(`StudentBranchHistory`, `TeacherSubject`).
 
 Turning this into a real multi-tenant product (selling to many *unrelated*
 centers, not just one center with several branches) would be a materially
@@ -329,18 +347,25 @@ isolation, billing — not assumed here.
 
 ## Hosting
 
-Not yet deployed anywhere; no Dockerfile, no CI/CD workflow, no hosting
-config committed. For this stack (ASP.NET Core 9 API + PostgreSQL +
-Vite/React SPA), the intended path is:
+Not yet deployed anywhere; no CI/CD workflow, no hosting config committed.
+No Dockerfile either, deliberately — this deploys via whatever the host
+builds natively from source, not a container. For this stack (ASP.NET Core
+9 API + PostgreSQL + Vite/React SPA), the intended path is:
 
 - **Database**: [Neon](https://neon.tech) (managed Postgres) — backups and
   patching stop being something to think about, generous free tier.
-- **API**: Railway or Azure App Service (Linux). Railway is the faster,
-  cheaper path to a first real deployment; Azure App Service is the more
-  natural fit if this should also read as an Azure-flavored .NET deployment.
+- **API**: Railway (builds a .NET project natively via Nixpacks, no
+  Dockerfile needed) or Azure App Service (Linux, same — deploys the
+  published output directly). Railway is the faster, cheaper path to a
+  first real deployment; Azure App Service is the more natural fit if this
+  should also read as an Azure-flavored .NET deployment. Either way, the
+  connection string and JWT key are set as real environment variables in
+  that host's own dashboard — the exact same `ConnectionStrings__Default`
+  / `Jwt__Key` names `Program.cs` already reads locally via User Secrets,
+  so no code change is needed to go from local to hosted.
 - **Frontend**: the Vite static build (`npm run build`) to Vercel or
   Netlify — trivial either way.
 
-Docker packaging and a basic CI workflow (build + the tests that don't yet
-exist) should land before a real center is using this, since every
-deployment right now would be a manual one.
+A basic CI workflow (build + the tests that don't yet exist) should land
+before a real center is using this, since every deployment right now would
+be a manual one.
