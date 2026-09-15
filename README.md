@@ -27,6 +27,7 @@ over HTTP.
   library — Button, Input, Select, Modal, PageHeader, StatCard, SearchInput)
 - React Hook Form + Zod
 - TanStack Query + Context for auth, axios client, React Router
+- Vitest + React Testing Library — see "Testing" below
 
 ## Roles
 
@@ -201,6 +202,31 @@ clearer than a mock setup.
 This is a starting set, not full coverage — it exists because these are
 the rules that were hardest to get right the first time, not because
 everything else is untested by design.
+
+**Frontend** (`Frontend/`, Vitest + React Testing Library):
+
+```bash
+cd Frontend && npm test
+```
+
+Almost all business logic in this app lives server-side by design (see
+"Every non-Owner request is scoped ... at the API/query level" above), so
+the frontend suite is deliberately smaller and targets the client-side
+logic that's actually intricate enough to break silently:
+
+- `scheduling/time.ts` — the datetime-local ⇄ UTC-ISO conversions every
+  session-scheduling form goes through
+- `attendance/window.ts` — the same 4-hour-after-end attendance-window
+  rule the backend enforces, extracted out of `AttendancePage` so it's
+  testable on its own rather than only reachable through a full page render
+- `TeacherFormModal`'s pay-rate schema — the percentage-must-be-≤100 `zod`
+  refinement (accepts exactly 100, rejects 101, doesn't apply to Hourly)
+- `StudentFormModal`'s create-student schema — the guardian-required-at-
+  creation cross-field rule (existing vs. new guardian, all three new-
+  guardian fields independently required)
+- `SearchInput` — the shared search component every list page uses,
+  rendered and typed into via React Testing Library rather than just
+  trusted to work
 
 ## Local backups
 
@@ -412,10 +438,12 @@ in priority order:
   front desk got logged out mid-shift.~~ Fixed — `Jwt:ExpiryMinutes` is now
   360 (6h), long enough for a full shift; still no refresh token, so it's
   still a hard logout at that point, not a silent renewal.
-- ~~Zero automated tests.~~ Backend now has a real xUnit suite covering
-  the trickiest business rules — see "Testing" below. Still no frontend
-  tests, and backend coverage is a starting set (the hardest rules to get
-  right), not the whole app.
+- ~~Zero automated tests.~~ Backend has an xUnit suite covering the
+  trickiest business rules; frontend has a Vitest + React Testing Library
+  suite covering the client-side logic intricate enough to be worth
+  testing on its own (schemas, the attendance-window rule, datetime
+  conversions) — see "Testing" below. Both are starting sets, not full
+  coverage of either app.
 - ~~No backup/disaster-recovery story.~~ Fixed for local development —
   see "Local backups" below; both the backup and the restore path are
   actually proven, not just assumed to work. Once this is actually

@@ -8,7 +8,7 @@ import { Modal } from '@/shared/ui/Modal'
 import { useCreateTeacherProfile, useTeacherCandidates, useUpdateTeacher } from './api'
 import type { Teacher } from './types'
 
-const teacherSchema = z
+export const teacherSchema = z
   .object({
     userId: z.string().optional(),
     hireDate: z.string().min(1, 'Hire date is required'),

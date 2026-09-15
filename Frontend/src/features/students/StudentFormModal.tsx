@@ -18,7 +18,7 @@ const editSchema = z.object({
 
 // A student must always have a guardian attached at creation - no "add it later" path exists, so
 // the guardian fields here are just as required as the student's own name or date of birth.
-const createSchema = z
+export const createSchema = z
   .object({
     fullName: z.string().min(1, 'Name is required'),
     dateOfBirth: z.string().min(1, 'Date of birth is required'),

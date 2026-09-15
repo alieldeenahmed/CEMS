@@ -9,15 +9,7 @@ import { useMySchedule } from '@/features/teachers/api'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { Select } from '@/shared/ui/Input'
 import { AttendanceGrid } from './AttendanceGrid'
-
-const ATTENDANCE_WINDOW_HOURS_AFTER_END = 4
-
-function isWithinAttendanceWindow(session: { startUtc: string; endUtc: string }) {
-  const now = Date.now()
-  const start = new Date(session.startUtc).getTime()
-  const closesAt = new Date(session.endUtc).getTime() + ATTENDANCE_WINDOW_HOURS_AFTER_END * 60 * 60 * 1000
-  return start <= now && now <= closesAt
-}
+import { isWithinAttendanceWindow } from './window'
 
 function CourseScopedPicker({ onSelect }: { onSelect: (sessionId: string) => void }) {
   const { data: courses } = useCourses()
