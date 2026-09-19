@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CEMS.Application.Common.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
@@ -7,12 +8,24 @@ namespace CEMS.Api.Middleware;
 
 public class GlobalExceptionHandler : IExceptionHandler
 {
+    private readonly ILogger<GlobalExceptionHandler> _logger;
+
+    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
+    {
+        _logger = logger;
+    }
+
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
+        var traceId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
+
         var problem = new ProblemDetails
         {
             Instance = httpContext.Request.Path
         };
+
+        // Lets a user's error report be matched to the exact log entry.
+        problem.Extensions["traceId"] = traceId;
 
         switch (exception)
         {
@@ -55,6 +68,18 @@ public class GlobalExceptionHandler : IExceptionHandler
                 problem.Status = StatusCodes.Status500InternalServerError;
                 problem.Title = "An unexpected error occurred";
                 break;
+        }
+
+        // Expected, client-caused failures are routine; only a 500 is an error worth paging on.
+        if (problem.Status == StatusCodes.Status500InternalServerError)
+        {
+            _logger.LogError(exception, "Unhandled exception on {Method} {Path} (trace {TraceId})",
+                httpContext.Request.Method, httpContext.Request.Path, traceId);
+        }
+        else
+        {
+            _logger.LogInformation("{Method} {Path} rejected with {StatusCode}: {Title} (trace {TraceId})",
+                httpContext.Request.Method, httpContext.Request.Path, problem.Status, problem.Title, traceId);
         }
 
         httpContext.Response.StatusCode = problem.Status.Value;

@@ -2,7 +2,7 @@
 
 A full-stack management system for a multi-branch educational center — branches and rooms, teachers, students and guardians, courses tied to curricula, scheduled sessions with automatic conflict detection, attendance, exams and grades, invoicing and payments, and payroll computed across four different compensation models. Every non-Owner request is scoped to the caller's own branch at the data-access level, not just hidden in the UI.
 
-![.NET 9](https://img.shields.io/badge/.NET-9-512BD4?logo=dotnet&logoColor=white) ![C#](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white) ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white) ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![.NET 9](https://img.shields.io/badge/.NET-9-512BD4?logo=dotnet&logoColor=white) ![C#](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white) ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white) ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) [![CI](https://github.com/alieldeenahmed/CEMS/actions/workflows/ci.yml/badge.svg)](https://github.com/alieldeenahmed/CEMS/actions/workflows/ci.yml)
 
 ## Screenshots
 
@@ -25,7 +25,7 @@ A full-stack management system for a multi-branch educational center — branche
 
 CEMS is built around one real operating model: an educational center that runs more than one physical branch, employs teachers who may float between branches, and has staff whose visibility must stay inside their own branch — an Owner sees everything, a Branch Manager sees only their branch, front-desk staff run billing and enrollment for their branch, and teachers see only what they teach.
 
-That constraint is what makes the system non-trivial. It isn't a CRUD demo with a role field bolted on: branch scoping is checked inside every query and command handler (114 of them), scheduling has to detect real conflicts (room double-booking, teacher double-booking, declared-availability violations) before a session is allowed to exist, and payroll has to compute correctly across four genuinely different compensation formulas rather than one calculation with a multiplier.
+That constraint is what makes the system non-trivial. It isn't a CRUD demo with a role field bolted on: branch scoping is checked inside the handlers that touch branch-owned data (each one calls `HasAccessToBranch` explicitly), scheduling has to detect real conflicts (room double-booking, teacher double-booking, declared-availability violations) before a session is allowed to exist, and payroll has to compute correctly across four genuinely different compensation formulas rather than one calculation with a multiplier.
 
 ## Key Features
 
@@ -73,12 +73,17 @@ That constraint is what makes the system non-trivial. It isn't a CRUD demo with 
 ### 🔐 Security & Authorization
 - JWT Bearer auth (`ASP.NET Identity` + `AddJwtBearer`) with issuer/audience/lifetime validation and zero clock skew; branch membership travels as `branch_id` claims on the token itself
 - Two-layer RBAC: broad `[Authorize(Roles = ...)]` at the controller, and a precise `HasAccessToBranch(branchId)` check inside the handler for the specific record being touched
-- A global `IExceptionHandler` (`GlobalExceptionHandler`) centralizes every failure mode — validation, not-found, forbidden, scheduling conflict — into a consistent `ProblemDetails` response, so no controller has its own try/catch
+- A global `IExceptionHandler` (`GlobalExceptionHandler`) centralizes every failure mode — validation, not-found, forbidden, scheduling conflict — into a consistent `ProblemDetails` response carrying a `traceId`, so no controller has its own try/catch
 - Admin-assisted password reset (`POST /users/staff/{id}/reset-password`) with the same branch/role boundary as staff creation — no email involved
 
 ### 📊 Reporting & Analytics
 - Cross-branch or single-branch revenue, teacher utilization (scheduled vs. available hours), attendance trends, and an enrollment funnel (total → any enrollment → active enrollment)
 - Exports to real PDF (QuestPDF) and Excel (`ExportDashboardExcelQuery` → ClosedXML), not a client-side print dialog
+
+### 🔍 Observability
+- A MediatR pipeline behavior (`AuditLoggingBehavior`) writes one structured log line per state-changing command — who ran it (user id and roles), which command, success or failure, and duration. It logs the command's type name only, never its payload, so passwords can't leak into logs; queries are skipped to keep read traffic quiet
+- `GlobalExceptionHandler` logs expected rejections (400/401/403/404/409) at Information and only genuine 500s at Error with the full exception, and adds a `traceId` to every error response so a user's report can be matched to the exact log entry
+- Framework log noise is tuned down in `appsettings.json` (EF Core per-query SQL and the framework's duplicate "unhandled exception" entry for already-handled errors), so the meaningful lines stay visible
 
 ## Architecture
 
@@ -173,7 +178,7 @@ React 19 + TypeScript, built with Vite. Routing is `react-router-dom`, with a `P
 
 ## Testing
 
-**Backend** — xUnit, **29 test methods** across 5 handler test classes (`Backend/tests/CEMS.Application.Tests`), run against a real `ApplicationDbContext` on a fresh SQLite in-memory database (`Database.EnsureCreated()`, not mocks), with hand-written fakes for `ICurrentUserService`/`IIdentityService`:
+**Backend** — xUnit, **73 test methods** across 9 test classes (`Backend/tests/CEMS.Application.Tests`), run against a real `ApplicationDbContext` on a fresh SQLite in-memory database (`Database.EnsureCreated()`, not mocks), with hand-written fakes for `ICurrentUserService`/`IIdentityService`:
 
 | Test class | What it covers |
 |---|---|
@@ -182,6 +187,12 @@ React 19 + TypeScript, built with Vite. Routing is `react-router-dom`, with a `P
 | `GeneratePayrollRunCommandHandlerTests` | All four `PayType`s; cancelled sessions excluded; payments outside the period ignored; overlapping-period guard |
 | `ResetStaffPasswordCommandHandlerTests` | Regression test for the `TeacherBranch`-vs-`UserBranchAssignment` bug described above |
 | `SubstituteSessionTeacherCommandHandlerTests` | Conflict detection, the Owner/BranchManager-only override split, cancelled/already-started session guards |
+| `CreateSessionCommandHandlerTests` | Room, teacher, and availability conflicts (reported together); cancelled and back-to-back sessions aren't conflicts; override needs Owner/BranchManager *and* a reason and persists an audit trail; structural violations (foreign-branch room, unassigned teacher) can't be overridden |
+| `EnrollmentCommandHandlerTests` | Capacity derived from the earliest non-cancelled session's room; waitlist positions increase; no-sessions course is unconstrained; dropped students can re-enroll; branch-mismatch and access guards; waitlist promotion |
+| `AuditLoggingBehaviorTests` | Commands log who/what/outcome at the right level, failures are logged and rethrown unchanged, the payload is never logged, queries are skipped |
+| `InvoiceLifecycleTests` | Status moves Pending → PartiallyPaid → Paid from summed instalments; package price beats a client-supplied amount; no payments on cancelled invoices; paid invoices can't be cancelled; overdue flag |
+
+One of these tests found a real bug while being written: `RecordPaymentCommandHandler` counted each new payment twice (EF's relationship fix-up had already appended it to `invoice.Payments`), so any single payment over half the invoice marked it fully paid. It's fixed, and `RecordPayment_MoreThanHalfButNotAll_StaysPartiallyPaid` guards against it coming back.
 
 ```bash
 dotnet test Backend/tests/CEMS.Application.Tests/CEMS.Application.Tests.csproj
@@ -195,7 +206,14 @@ cd Frontend && npm test
 
 ## CI/CD
 
-No CI/CD pipeline is currently configured — there's no `.github/workflows` directory in this repository. Tests are run locally via the commands above.
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main` and on every pull request, as two parallel jobs:
+
+| Job | Steps |
+|---|---|
+| Backend | `dotnet restore` → `dotnet build` (Release, whole solution) → `dotnet test` |
+| Frontend | `npm ci` → `npm run lint` (oxlint) → `npm test` (Vitest) → `npm run build` (`tsc -b` + Vite) |
+
+The backend tests use SQLite in-memory, so the workflow needs no database service. There is no deployment step — the pipeline validates, it doesn't ship.
 
 ## Project Structure
 
@@ -209,6 +227,7 @@ CEMS/
 │   │   └── CEMS.Api/             # Controllers, JWT/CORS/Swagger setup, exception handling
 │   └── tests/
 │       └── CEMS.Application.Tests/
+├── .github/workflows/            # CI: backend build+test, frontend lint+test+build
 ├── Frontend/
 │   └── src/
 │       ├── features/             # One folder per domain module, mirrors Application/
@@ -315,12 +334,13 @@ Prints every seeded account's email at the end (all passwords: `DemoPass123`).
 
 ## Project Status
 
-Actively developed, demo-ready for local evaluation — not deployed, and not wired up to CI/CD (no `.github/workflows` in the repository). Honest, verified limitations:
+Actively developed and demo-ready for local evaluation, with CI validating every push. Known limitations:
 
 - Session scheduling assumes a single timezone across all branches; `TeacherAvailability` and session times are compared as literal UTC day-of-week/time-of-day with no per-branch timezone handling
 - JWTs last 6 hours (`Jwt:ExpiryMinutes`) with no refresh token — a hard logout at expiry, not a silent renewal
 - No email integration: password resets are admin-assisted rather than self-service, and there are no invoice-due reminders
-- Test suites (29 backend, 18 frontend) are a starting set targeting the highest-risk business rules, not exhaustive coverage of either codebase
+- Logging goes through the standard `ILogger` to the console only — there is no log sink, metrics, or tracing backend configured
+- Test suites (73 backend, 18 frontend) target the highest-risk business rules rather than every handler — 11 of the 114 handlers have dedicated tests
 
 ## License
 
