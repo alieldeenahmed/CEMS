@@ -36,6 +36,11 @@ public class MarkAttendanceCommandHandler : IRequestHandler<MarkAttendanceComman
             throw new ForbiddenAccessException("You do not have access to mark attendance for this session.");
         }
 
+        if (session.Status == SessionStatus.Cancelled)
+        {
+            throw new BadRequestException(new[] { "Cannot mark attendance for a cancelled session." });
+        }
+
         if (session.StartUtc > DateTime.UtcNow)
         {
             throw new BadRequestException(new[] { "Cannot mark attendance for a session that hasn't started yet." });

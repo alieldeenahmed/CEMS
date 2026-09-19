@@ -105,6 +105,24 @@ public class IdentityService : IIdentityService
         var user = await _userManager.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException(nameof(ApplicationUser), userId);
 
+        // Validate the new password against the policy *before* touching the old one. Identity's
+        // AddPassword validates too, but by then RemovePassword has already run, so a rejected new
+        // password would leave the account with no password at all.
+        var policyErrors = new List<string>();
+        foreach (var validator in _userManager.PasswordValidators)
+        {
+            var validation = await validator.ValidateAsync(_userManager, user, newPassword);
+            if (!validation.Succeeded)
+            {
+                policyErrors.AddRange(validation.Errors.Select(e => e.Description));
+            }
+        }
+
+        if (policyErrors.Count > 0)
+        {
+            return new ResetPasswordResult(false, policyErrors);
+        }
+
         var removeResult = await _userManager.RemovePasswordAsync(user);
         if (!removeResult.Succeeded)
         {

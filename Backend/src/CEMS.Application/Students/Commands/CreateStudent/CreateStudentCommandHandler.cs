@@ -1,5 +1,6 @@
 using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
+using CEMS.Application.Students.Guardians;
 using CEMS.Domain.Branches;
 using CEMS.Domain.Students;
 using MediatR;
@@ -34,7 +35,7 @@ public class CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand,
         Guid guardianId;
         if (request.ExistingGuardianId.HasValue)
         {
-            var guardianExists = await _context.Guardians.AnyAsync(g => g.Id == request.ExistingGuardianId.Value, cancellationToken);
+            var guardianExists = await _context.Guardians.VisibleTo(_currentUser).AnyAsync(g => g.Id == request.ExistingGuardianId.Value, cancellationToken);
             if (!guardianExists)
             {
                 throw new NotFoundException(nameof(Guardian), request.ExistingGuardianId.Value);

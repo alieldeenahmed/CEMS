@@ -26,7 +26,10 @@ public class GetGuardianByIdQueryHandler : IRequestHandler<GetGuardianByIdQuery,
 
         var isStaff = _currentUser.IsInRole(RoleNames.Owner) || _currentUser.IsInRole(RoleNames.BranchManager) || _currentUser.IsInRole(RoleNames.FrontDesk);
 
-        if (!isStaff)
+        var isVisible = isStaff
+            && await _context.Guardians.VisibleTo(_currentUser).AnyAsync(g => g.Id == request.Id, cancellationToken);
+
+        if (!isVisible)
         {
             throw new ForbiddenAccessException("You do not have access to this guardian record.");
         }

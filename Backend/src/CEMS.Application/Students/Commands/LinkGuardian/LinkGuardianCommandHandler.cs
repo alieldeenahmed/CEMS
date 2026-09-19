@@ -1,5 +1,6 @@
 using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
+using CEMS.Application.Students.Guardians;
 using CEMS.Domain.Students;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +28,8 @@ public class LinkGuardianCommandHandler : IRequestHandler<LinkGuardianCommand>
             throw new ForbiddenAccessException("You do not have access to this branch.");
         }
 
-        var guardianExists = await _context.Guardians.AnyAsync(g => g.Id == request.GuardianId, cancellationToken);
+        // A guardian the caller can't see is reported as not found, so linking can't be used to probe another branch's records.
+        var guardianExists = await _context.Guardians.VisibleTo(_currentUser).AnyAsync(g => g.Id == request.GuardianId, cancellationToken);
         if (!guardianExists)
         {
             throw new NotFoundException(nameof(Guardian), request.GuardianId);

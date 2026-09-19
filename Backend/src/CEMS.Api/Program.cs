@@ -140,3 +140,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Exposes the entry point to WebApplicationFactory in CEMS.Api.Tests.
+public partial class Program { }

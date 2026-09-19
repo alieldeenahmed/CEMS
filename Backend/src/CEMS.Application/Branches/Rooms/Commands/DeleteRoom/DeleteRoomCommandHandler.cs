@@ -27,6 +27,11 @@ public class DeleteRoomCommandHandler : IRequestHandler<DeleteRoomCommand>
             throw new ForbiddenAccessException("You do not have access to this branch.");
         }
 
+        if (await _context.CourseSessions.AnyAsync(s => s.RoomId == request.Id, cancellationToken))
+        {
+            throw new BadRequestException(new[] { "Cannot delete a room that has sessions scheduled in it." });
+        }
+
         _context.Rooms.Remove(room);
         await _context.SaveChangesAsync(cancellationToken);
     }
