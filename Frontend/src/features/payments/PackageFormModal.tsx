@@ -1,6 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
@@ -38,15 +40,21 @@ export function PackageFormModal({
     },
   })
 
+  const [serverError, setServerError] = useState<string | null>(null)
   const isSaving = createPackage.isPending || updatePackage.isPending
 
   async function onSubmit(values: PackageFormValues) {
-    if (pkg) {
-      await updatePackage.mutateAsync({ id: pkg.id, ...values })
-    } else {
-      await createPackage.mutateAsync(values)
+    setServerError(null)
+    try {
+      if (pkg) {
+        await updatePackage.mutateAsync({ id: pkg.id, ...values })
+      } else {
+        await createPackage.mutateAsync(values)
+      }
+      onClose()
+    } catch (error) {
+      setServerError(getErrorMessage(error, 'Could not save this package.'))
     }
-    onClose()
   }
 
   return (
@@ -65,6 +73,8 @@ export function PackageFormModal({
           {...register('price', { valueAsNumber: true })}
           error={errors.price?.message}
         />
+
+        {serverError && <p className="text-sm text-coral">{serverError}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

@@ -1,6 +1,7 @@
 import { ArrowUpCircle, X } from 'lucide-react'
 import { useState } from 'react'
 import { useStudents } from '@/features/students/api'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import {
   useDropEnrollment,
@@ -104,7 +105,9 @@ export function EnrollmentsSection({ course }: { course: Course }) {
           variant="secondary"
           disabled={!selectedStudentId || enrollStudent.isPending}
           onClick={() => {
-            enrollStudent.mutate(selectedStudentId)
+            enrollStudent.mutate(selectedStudentId, {
+              onError: (error) => window.alert(getErrorMessage(error, 'Could not enroll this student.')),
+            })
             setSelectedStudentId('')
           }}
         >

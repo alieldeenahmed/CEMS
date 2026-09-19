@@ -11,6 +11,8 @@ import { downloadDashboardExcel, downloadDashboardPdf, useAnalyticsDashboard } f
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
+const formatHours = (hours: number) => `${Number(hours.toFixed(1))}h`
+
 function currentMonthRange() {
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -71,14 +73,22 @@ export function AnalyticsPage() {
         <div className="ml-auto flex gap-2">
           <Button
             variant="secondary"
-            onClick={() => downloadDashboardPdf(effectiveBranchId, periodStart, periodEnd)}
+            onClick={() =>
+              downloadDashboardPdf(effectiveBranchId, periodStart, periodEnd).catch(() =>
+                window.alert('Could not export the PDF.'),
+              )
+            }
           >
             <Download size={15} />
             PDF
           </Button>
           <Button
             variant="secondary"
-            onClick={() => downloadDashboardExcel(effectiveBranchId, periodStart, periodEnd)}
+            onClick={() =>
+              downloadDashboardExcel(effectiveBranchId, periodStart, periodEnd).catch(() =>
+                window.alert('Could not export the spreadsheet.'),
+              )
+            }
           >
             <FileSpreadsheet size={15} />
             Excel
@@ -172,7 +182,7 @@ export function AnalyticsPage() {
               >
                 <span className="font-medium text-ink">{row.teacherFullName}</span>
                 <span className="text-muted">
-                  {row.scheduledHours}h / {row.availableHours}h ·{' '}
+                  {formatHours(row.scheduledHours)} / {formatHours(row.availableHours)} ·{' '}
                   <span className="font-medium text-ink">{(row.utilizationRate * 100).toFixed(1)}%</span>
                 </span>
               </div>

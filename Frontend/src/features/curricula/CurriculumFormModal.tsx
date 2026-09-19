@@ -1,6 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
@@ -36,15 +38,21 @@ export function CurriculumFormModal({
     },
   })
 
+  const [serverError, setServerError] = useState<string | null>(null)
   const isSaving = createCurriculum.isPending || updateCurriculum.isPending
 
   async function onSubmit(values: CurriculumFormValues) {
-    if (curriculum) {
-      await updateCurriculum.mutateAsync({ id: curriculum.id, ...values })
-    } else {
-      await createCurriculum.mutateAsync(values)
+    setServerError(null)
+    try {
+      if (curriculum) {
+        await updateCurriculum.mutateAsync({ id: curriculum.id, ...values })
+      } else {
+        await createCurriculum.mutateAsync(values)
+      }
+      onClose()
+    } catch (error) {
+      setServerError(getErrorMessage(error, 'Could not save this curriculum.'))
     }
-    onClose()
   }
 
   return (
@@ -52,6 +60,8 @@ export function CurriculumFormModal({
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input label="Name" {...register('name')} error={errors.name?.message} />
         <Input label="Description" {...register('description')} error={errors.description?.message} />
+
+        {serverError && <p className="text-sm text-coral">{serverError}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

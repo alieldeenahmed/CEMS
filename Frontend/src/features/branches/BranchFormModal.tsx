@@ -1,6 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
@@ -37,15 +39,21 @@ export function BranchFormModal({ branch, onClose }: BranchFormModalProps) {
     },
   })
 
+  const [serverError, setServerError] = useState<string | null>(null)
   const isSaving = createBranch.isPending || updateBranch.isPending
 
   async function onSubmit(values: BranchFormValues) {
-    if (branch) {
-      await updateBranch.mutateAsync({ id: branch.id, isActive: branch.isActive, ...values })
-    } else {
-      await createBranch.mutateAsync(values)
+    setServerError(null)
+    try {
+      if (branch) {
+        await updateBranch.mutateAsync({ id: branch.id, isActive: branch.isActive, ...values })
+      } else {
+        await createBranch.mutateAsync(values)
+      }
+      onClose()
+    } catch (error) {
+      setServerError(getErrorMessage(error, 'Could not save this branch.'))
     }
-    onClose()
   }
 
   return (
@@ -54,6 +62,8 @@ export function BranchFormModal({ branch, onClose }: BranchFormModalProps) {
         <Input label="Name" {...register('name')} error={errors.name?.message} />
         <Input label="Address" {...register('address')} error={errors.address?.message} />
         <Input label="Phone" {...register('phone')} error={errors.phone?.message} />
+
+        {serverError && <p className="text-sm text-coral">{serverError}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

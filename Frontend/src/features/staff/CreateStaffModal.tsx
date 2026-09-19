@@ -53,7 +53,9 @@ export function CreateStaffModal({ onClose, allowedRoles = STAFF_ROLES, lockedBr
     formState: { errors, isSubmitting },
   } = useForm<StaffFormValues>({
     resolver: zodResolver(staffSchema),
-    defaultValues: { role: allowedRoles[0] },
+    // With a locked branch there is no picker for the user to fill in, so the schema's "branch is
+    // required" rule has to be satisfied up front or the form would fail on a field they can't see.
+    defaultValues: { role: allowedRoles[0], branchId: lockedBranchId },
   })
 
   const role = watch('role')

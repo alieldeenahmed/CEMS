@@ -1,6 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
@@ -40,15 +42,21 @@ export function ExamFormModal({
     },
   })
 
+  const [serverError, setServerError] = useState<string | null>(null)
   const isSaving = createExam.isPending || updateExam.isPending
 
   async function onSubmit(values: ExamFormValues) {
-    if (exam) {
-      await updateExam.mutateAsync({ id: exam.id, ...values })
-    } else {
-      await createExam.mutateAsync(values)
+    setServerError(null)
+    try {
+      if (exam) {
+        await updateExam.mutateAsync({ id: exam.id, ...values })
+      } else {
+        await createExam.mutateAsync(values)
+      }
+      onClose()
+    } catch (error) {
+      setServerError(getErrorMessage(error, 'Could not save this exam.'))
     }
-    onClose()
   }
 
   return (
@@ -63,6 +71,8 @@ export function ExamFormModal({
           error={errors.maxScore?.message}
         />
         <Input label="Exam date" type="date" {...register('examDate')} error={errors.examDate?.message} />
+
+        {serverError && <p className="text-sm text-coral">{serverError}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

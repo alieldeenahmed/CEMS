@@ -18,6 +18,17 @@ const ROLE_LABELS: Record<string, string> = {
   Teacher: 'Teacher',
 }
 
+// Only an Owner spans every branch. A teacher's branches live on their teacher profile rather than on
+// the account, so "no branch here" must not read as "all branches".
+export function branchLabel(staff: StaffUser, branchNameById: Map<string, string>): string {
+  if (staff.branchIds.length > 0) {
+    return staff.branchIds.map((id) => branchNameById.get(id) ?? 'Unknown').join(', ')
+  }
+  if (staff.roles.includes('Owner')) return 'All branches'
+  if (staff.roles.includes('Teacher')) return 'Set on teacher profile'
+  return 'No branch assigned'
+}
+
 export function StaffPage() {
   const { user, hasRole } = useAuth()
   const isOwner = hasRole(ROLES.Owner)
@@ -91,9 +102,7 @@ export function StaffPage() {
               </div>
 
               <p className="w-40 text-xs text-muted">
-                {staffMember.branchIds.length > 0
-                  ? staffMember.branchIds.map((id) => branchNameById.get(id) ?? 'Unknown').join(', ')
-                  : 'All branches'}
+                {branchLabel(staffMember, branchNameById)}
               </p>
 
               <span

@@ -178,30 +178,38 @@ React 19 + TypeScript, built with Vite. Routing is `react-router-dom`, with a `P
 
 ## Testing
 
-**Backend** — xUnit, **73 test methods** across 9 test classes (`Backend/tests/CEMS.Application.Tests`), run against a real `ApplicationDbContext` on a fresh SQLite in-memory database (`Database.EnsureCreated()`, not mocks), with hand-written fakes for `ICurrentUserService`/`IIdentityService`:
+**423 backend tests and 262 frontend tests**, all run in CI. Measured line coverage is **98.4% for the backend** (EF migrations excluded — they're generated code) and **98.9% for the frontend** (92.2% branch coverage). Coverage isn't padded with trivial assertions: the tests are what exposed the defects listed below.
 
-| Test class | What it covers |
-|---|---|
-| `MarkAttendanceCommandHandlerTests` | Can't mark a future session; can't mark more than 4h after it ends; branch/session-teacher access |
-| `TransferStudentBranchCommandHandlerTests` | Same-branch guard; history row written correctly; access checked against the student's *current* branch |
-| `GeneratePayrollRunCommandHandlerTests` | All four `PayType`s; cancelled sessions excluded; payments outside the period ignored; overlapping-period guard |
-| `ResetStaffPasswordCommandHandlerTests` | Regression test for the `TeacherBranch`-vs-`UserBranchAssignment` bug described above |
-| `SubstituteSessionTeacherCommandHandlerTests` | Conflict detection, the Owner/BranchManager-only override split, cancelled/already-started session guards |
-| `CreateSessionCommandHandlerTests` | Room, teacher, and availability conflicts (reported together); cancelled and back-to-back sessions aren't conflicts; override needs Owner/BranchManager *and* a reason and persists an audit trail; structural violations (foreign-branch room, unassigned teacher) can't be overridden |
-| `EnrollmentCommandHandlerTests` | Capacity derived from the earliest non-cancelled session's room; waitlist positions increase; no-sessions course is unconstrained; dropped students can re-enroll; branch-mismatch and access guards; waitlist promotion |
-| `AuditLoggingBehaviorTests` | Commands log who/what/outcome at the right level, failures are logged and rethrown unchanged, the payload is never logged, queries are skipped |
-| `InvoiceLifecycleTests` | Status moves Pending → PartiallyPaid → Paid from summed instalments; package price beats a client-supplied amount; no payments on cancelled invoices; paid invoices can't be cancelled; overdue flag |
+**Backend — two xUnit projects, no mocking library.**
 
-One of these tests found a real bug while being written: `RecordPaymentCommandHandler` counted each new payment twice (EF's relationship fix-up had already appended it to `invoice.Payments`), so any single payment over half the invoice marked it fully paid. It's fixed, and `RecordPayment_MoreThanHalfButNotAll_StaysPartiallyPaid` guards against it coming back.
+| Project | Tests | What it exercises |
+|---|---|---|
+| `CEMS.Application.Tests` | 291 | Every command/query handler family against a real `ApplicationDbContext` on SQLite in-memory (`EnsureCreated`, not mocks), with hand-written fakes for `ICurrentUserService`/`IIdentityService`. Includes the real MediatR pipeline (validation + audit logging), the real ASP.NET Identity/JWT code, and the real QuestPDF/ClosedXML generators. Analytics tests assert hand-computed numbers, not just "returns something". |
+| `CEMS.Api.Tests` | 132 | The whole HTTP stack through `WebApplicationFactory<Program>`: real routing, JWT auth, model binding, exception-to-status mapping, and multi-step workflows (enroll → invoice → pay → payroll, waitlist promotion, substitution, password reset) signed in as real users from two branches. |
+
+Two suites in `CEMS.Api.Tests` do most of the security work:
+
+- **Authorization snapshot** (`authorization-surface.txt`) — a reflected list of every one of the 114 endpoints with its `[Authorize]` roles. Any endpoint added, removed, or re-permissioned makes the test fail until the diff is reviewed and the snapshot is regenerated with `UPDATE_AUTH_SNAPSHOT=1`. Nobody can widen access by accident.
+- **Role × endpoint matrix and branch-isolation tests** — a user at one branch is refused (or sees nothing) for another branch's students, guardians, sessions, invoices and payroll, over real HTTP.
+
+Bugs the tests found (all fixed, each with a regression test):
+
+- `RecordPaymentCommandHandler` counted each new payment twice, so any single payment over half an invoice marked it fully paid.
+- Guardians were visible and editable across branches — any staff member could list, read, update and link guardians belonging to another branch's students. Access is now derived from the guardian's students' branches.
+- Deleting a student, room or teacher with history (enrollments, sessions, payroll) hit a foreign-key error and returned a 500; each now returns a 400 with an explanation.
+- Attendance could be marked on a cancelled session.
+- Admin password reset skipped the password policy (it removed the old password before validating the new one).
 
 ```bash
-dotnet test Backend/tests/CEMS.Application.Tests/CEMS.Application.Tests.csproj
+dotnet test Backend/CEMS.sln
 ```
 
-**Frontend** — Vitest + React Testing Library, **18 test cases** across 5 files, targeting the client-side logic that can break silently rather than re-testing what the backend already covers: `scheduling/time.ts` (datetime-local ⇄ UTC-ISO conversions), `attendance/window.ts` (the same 4-hour attendance-window rule, extracted for standalone testing), `TeacherFormModal`'s pay-rate schema, `StudentFormModal`'s guardian-required-at-creation schema, and the shared `SearchInput` component.
+**Frontend** — Vitest + React Testing Library, 22 files. Tests run the real components, React Query hooks, axios client and interceptors; only the HTTP adapter is replaced by a small fake (`src/test/harness.tsx`) that **fails the test on any request it wasn't told about**, so a missing mock can't hide as an empty screen. They cover every feature module: sign-in, session expiry and role-based nav; students (registration, transfer, guardians); teachers; staff; branches and rooms; courses, curricula and enrollments; scheduling (including conflict and override flows); attendance; exams and grading; payments; payroll; analytics; the dashboards; and the assembled router.
+
+Writing them also fixed real UX defects: several forms swallowed server errors silently (they now show the reason), form labels weren't linked to their inputs, and analytics exports failed with no feedback.
 
 ```bash
-cd Frontend && npm test
+cd Frontend && npm run test:coverage
 ```
 
 ## CI/CD
@@ -210,8 +218,8 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main` and on 
 
 | Job | Steps |
 |---|---|
-| Backend | `dotnet restore` → `dotnet build` (Release, whole solution) → `dotnet test` |
-| Frontend | `npm ci` → `npm run lint` (oxlint) → `npm test` (Vitest) → `npm run build` (`tsc -b` + Vite) |
+| Backend | `dotnet restore` → `dotnet build` (Release, whole solution) → `dotnet test` (both test projects) |
+| Frontend | `npm ci` → `npm run lint` (oxlint) → `npm run test:coverage` (Vitest, fails below a 90% coverage floor) → `npm run build` (`tsc -b` + Vite) |
 
 The backend tests use SQLite in-memory, so the workflow needs no database service. There is no deployment step — the pipeline validates, it doesn't ship.
 
@@ -226,7 +234,8 @@ CEMS/
 │   │   ├── CEMS.Infrastructure/  # EF Core, Identity, Postgres, QuestPDF, ClosedXML
 │   │   └── CEMS.Api/             # Controllers, JWT/CORS/Swagger setup, exception handling
 │   └── tests/
-│       └── CEMS.Application.Tests/
+│       ├── CEMS.Application.Tests/   # Handler, pipeline, Identity/JWT, report tests
+│       └── CEMS.Api.Tests/           # HTTP integration, authorization snapshot
 ├── .github/workflows/            # CI: backend build+test, frontend lint+test+build
 ├── Frontend/
 │   └── src/
@@ -340,7 +349,8 @@ Actively developed and demo-ready for local evaluation, with CI validating every
 - JWTs last 6 hours (`Jwt:ExpiryMinutes`) with no refresh token — a hard logout at expiry, not a silent renewal
 - No email integration: password resets are admin-assisted rather than self-service, and there are no invoice-due reminders
 - Logging goes through the standard `ILogger` to the console only — there is no log sink, metrics, or tracing backend configured
-- Test suites (73 backend, 18 frontend) target the highest-risk business rules rather than every handler — 11 of the 114 handlers have dedicated tests
+- A JWT stays valid until it expires even if the account is deactivated afterwards (no per-request check against the user store), and there is no login lockout after repeated failures
+- Line coverage is high, but the suites are still fakes at the edges: the backend tests use SQLite rather than PostgreSQL, so Postgres-specific behaviour isn't exercised in CI
 
 ## License
 

@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { ROLES } from '@/features/auth/constants'
 import type { Course } from '@/features/courses/types'
 import { useTeachers } from '@/features/teachers/api'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { Select } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
@@ -51,11 +52,8 @@ export function CreateSessionModal({ course, onClose }: { course: Course; onClos
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 409) {
         setConflicts(error.response.data?.conflicts ?? ['A scheduling conflict was detected.'])
-      } else if (isAxiosError(error) && error.response) {
-        const errors = error.response.data?.errors
-        setGenericError(Array.isArray(errors) ? errors.join(' ') : 'Could not schedule this session.')
       } else {
-        setGenericError('Could not schedule this session.')
+        setGenericError(getErrorMessage(error, 'Could not schedule this session.'))
       }
     }
   }
@@ -91,16 +89,18 @@ export function CreateSessionModal({ course, onClose }: { course: Course; onClos
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink">Start</label>
+            <label htmlFor="session-start" className="mb-1 block text-sm font-medium text-ink">Start</label>
             <input
+              id="session-start"
               type="datetime-local"
               className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-navy"
               {...register('startLocal', { required: true })}
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink">End</label>
+            <label htmlFor="session-end" className="mb-1 block text-sm font-medium text-ink">End</label>
             <input
+              id="session-end"
               type="datetime-local"
               className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-navy"
               {...register('endLocal', { required: true })}

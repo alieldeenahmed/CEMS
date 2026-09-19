@@ -2,6 +2,7 @@ import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBranches } from '@/features/branches/api'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { SearchInput } from '@/shared/ui/SearchInput'
@@ -29,7 +30,9 @@ export function StudentsPage() {
 
   function handleDelete(student: Student) {
     if (window.confirm(`Remove ${student.fullName}? This cannot be undone.`)) {
-      deleteStudent.mutate(student.id)
+      deleteStudent.mutate(student.id, {
+        onError: (error) => window.alert(getErrorMessage(error, 'Could not delete this student.')),
+      })
     }
   }
 

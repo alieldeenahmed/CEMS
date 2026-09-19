@@ -15,5 +15,13 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.ts',
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/main.tsx', 'src/**/*.d.ts'],
+      reporter: ['text-summary', 'html'],
+      // A floor, not a target: coverage is measured at ~98%, and a drop below 90 should fail CI.
+      thresholds: { statements: 90, lines: 90, functions: 90, branches: 85 },
+    },
   },
 })

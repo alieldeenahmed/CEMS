@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { useCreateRoom, useDeleteRoom, useRoomsByBranch, useUpdateRoom } from './api'
@@ -59,7 +60,11 @@ export function RoomsSection({ branchId }: { branchId: string }) {
                   <button
                     type="button"
                     aria-label={`Delete ${room.name}`}
-                    onClick={() => deleteRoom.mutate(room.id)}
+                    onClick={() =>
+                      deleteRoom.mutate(room.id, {
+                        onError: (error) => window.alert(getErrorMessage(error, 'Could not delete this room.')),
+                      })
+                    }
                     className="text-muted transition-colors hover:text-coral"
                   >
                     <Trash2 size={15} />

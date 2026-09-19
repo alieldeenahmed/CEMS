@@ -17,11 +17,12 @@ export function StaffExamsView() {
   const isStaff = hasRole(ROLES.Owner, ROLES.BranchManager, ROLES.FrontDesk)
   const canManage = hasRole(ROLES.Owner, ROLES.BranchManager, ROLES.Teacher)
 
-  const { data: staffCourses } = useCourses()
-  const { data: myCourses } = useMyCourses()
+  // Each role has exactly one course list it may call; asking for the other would only earn a 403.
+  const { data: staffCourses } = useCourses({ enabled: isStaff })
+  const { data: myCourses } = useMyCourses({ enabled: !isStaff })
   const courses = isStaff ? staffCourses : myCourses
 
-  const { data: branches } = useBranches()
+  const { data: branches } = useBranches({ enabled: isStaff })
   const [courseId, setCourseId] = useState('')
   const { data: exams, isLoading } = useExamsForCourse(courseId || null)
   const deleteExam = useDeleteExam(courseId)

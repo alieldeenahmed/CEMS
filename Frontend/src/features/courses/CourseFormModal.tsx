@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useBranches } from '@/features/branches/api'
 import { useCurricula } from '@/features/curricula/api'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { Select } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
@@ -39,15 +41,21 @@ export function CourseFormModal({ course, onClose }: { course: Course | null; on
     },
   })
 
+  const [serverError, setServerError] = useState<string | null>(null)
   const isSaving = createCourse.isPending || updateCourse.isPending
 
   async function onSubmit(values: CourseFormValues) {
-    if (course) {
-      await updateCourse.mutateAsync({ id: course.id, name: values.name, deliveryMode: values.deliveryMode })
-    } else {
-      await createCourse.mutateAsync(values)
+    setServerError(null)
+    try {
+      if (course) {
+        await updateCourse.mutateAsync({ id: course.id, name: values.name, deliveryMode: values.deliveryMode })
+      } else {
+        await createCourse.mutateAsync(values)
+      }
+      onClose()
+    } catch (error) {
+      setServerError(getErrorMessage(error, 'Could not save this course.'))
     }
-    onClose()
   }
 
   return (
@@ -81,6 +89,8 @@ export function CourseFormModal({ course, onClose }: { course: Course | null; on
             </Select>
           </>
         )}
+
+        {serverError && <p className="text-sm text-coral">{serverError}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

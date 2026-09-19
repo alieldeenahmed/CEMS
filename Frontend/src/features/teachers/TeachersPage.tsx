@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ROLES } from '@/features/auth/constants'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { SearchInput } from '@/shared/ui/SearchInput'
@@ -36,7 +37,9 @@ export function TeachersPage() {
 
   function handleDelete(teacher: Teacher) {
     if (window.confirm(`Remove ${teacher.fullName}'s teacher profile? This cannot be undone.`)) {
-      deleteTeacher.mutate(teacher.id)
+      deleteTeacher.mutate(teacher.id, {
+        onError: (error) => window.alert(getErrorMessage(error, 'Could not delete this teacher profile.')),
+      })
     }
   }
 

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ROLES } from '@/features/auth/constants'
 import { useTeachers } from '@/features/teachers/api'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { Select } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
@@ -48,11 +49,8 @@ export function SubstituteTeacherModal({
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 409) {
         setConflicts(error.response.data?.conflicts ?? ['A scheduling conflict was detected.'])
-      } else if (isAxiosError(error) && error.response) {
-        const errors = error.response.data?.errors
-        setGenericError(Array.isArray(errors) ? errors.join(' ') : 'Could not substitute the teacher.')
       } else {
-        setGenericError('Could not substitute the teacher.')
+        setGenericError(getErrorMessage(error, 'Could not substitute the teacher.'))
       }
     }
   }

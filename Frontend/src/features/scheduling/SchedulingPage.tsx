@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useBranches } from '@/features/branches/api'
 import { useCourses } from '@/features/courses/api'
 import { useTeachers } from '@/features/teachers/api'
+import { getErrorMessage } from '@/shared/api/errors'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { Select } from '@/shared/ui/Input'
@@ -37,7 +38,10 @@ export function SchedulingPage() {
   const scheduledSessions = sessions?.filter((s) => s.status === 'Scheduled') ?? []
 
   function handleCancel(session: CourseSession, rescheduledToSessionId: string | null) {
-    cancelSession.mutate({ id: session.id, rescheduledToSessionId })
+    cancelSession.mutate(
+      { id: session.id, rescheduledToSessionId },
+      { onError: (error) => window.alert(getErrorMessage(error, 'Could not cancel this session.')) },
+    )
     setCancelingSessionId(null)
   }
 

@@ -2,23 +2,25 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
 import type { Course, CourseInput, Enrollment, UpdateCourseInput } from './types'
 
-export function useCourses() {
+export function useCourses(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['courses'],
     queryFn: async () => {
       const { data } = await apiClient.get<Course[]>('/courses')
       return data
     },
+    enabled: options.enabled ?? true,
   })
 }
 
-export function useMyCourses() {
+export function useMyCourses(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['my-courses'],
     queryFn: async () => {
       const { data } = await apiClient.get<Course[]>('/courses/my-courses')
       return data
     },
+    enabled: options.enabled ?? true,
   })
 }
 
