@@ -24,10 +24,7 @@ public class RemoveTeacherQualificationCommandHandler : IRequestHandler<RemoveTe
             .FirstOrDefaultAsync(q => q.TeacherId == request.TeacherId && q.CourseId == request.CourseId, cancellationToken)
             ?? throw new NotFoundException(nameof(TeacherCourseQualification), $"{request.TeacherId}/{request.CourseId}");
 
-        if (!_currentUser.HasAccessToBranch(link.Course.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(link.Course.BranchId);
 
         _context.TeacherCourseQualifications.Remove(link);
         await _context.SaveChangesAsync(cancellationToken);

@@ -1,4 +1,4 @@
-using CEMS.Application.Common.Exceptions;
+﻿using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Scheduling.Commands.SubstituteSessionTeacher;
 using CEMS.Application.Tests.TestSupport;
 using CEMS.Domain.Branches;
@@ -14,11 +14,16 @@ public class SubstituteSessionTeacherCommandHandlerTests : HandlerTestBase
     private Guid _originalTeacherId;
     private CourseSession _session = null!;
 
-    private Teacher SeedNewTeacher(bool withMatchingAvailability)
+    private Teacher SeedNewTeacher(bool withMatchingAvailability, bool qualified = true)
     {
         var newTeacher = new Teacher { Id = Guid.NewGuid(), UserId = Guid.NewGuid(), HireDate = DateOnly.FromDateTime(DateTime.UtcNow), PayType = PayType.Hourly, PayRate = 100 };
         Context.Teachers.Add(newTeacher);
         Context.TeacherBranches.Add(new TeacherBranch { TeacherId = newTeacher.Id, BranchId = _branchId });
+
+        if (qualified)
+        {
+            Context.TeacherCourseQualifications.Add(new TeacherCourseQualification { TeacherId = newTeacher.Id, CourseId = _session.CourseId });
+        }
 
         if (withMatchingAvailability)
         {
@@ -45,7 +50,7 @@ public class SubstituteSessionTeacherCommandHandlerTests : HandlerTestBase
         var curriculum = new Curriculum { Id = Guid.NewGuid(), Name = "IG", Description = "IG" };
         var course = new Course { Id = Guid.NewGuid(), Name = "Math", DeliveryMode = DeliveryMode.Group, CurriculumId = curriculum.Id, BranchId = branch.Id };
 
-        var start = DateTime.UtcNow.AddDays(7);
+        var start = DateTime.UtcNow.Date.AddDays(7).AddHours(10);   // mid-morning, so the hour after it never crosses midnight
         var session = new CourseSession
         {
             Id = Guid.NewGuid(),

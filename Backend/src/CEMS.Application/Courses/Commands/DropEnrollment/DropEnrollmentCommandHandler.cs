@@ -24,12 +24,12 @@ public class DropEnrollmentCommandHandler : IRequestHandler<DropEnrollmentComman
             .FirstOrDefaultAsync(e => e.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(CourseEnrollment), request.Id);
 
-        if (!_currentUser.HasAccessToBranch(enrollment.Course.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(enrollment.Course.BranchId);
 
+        // A dropped enrollment is no longer in the queue, so it must not keep a waitlist position (positions
+        // are unique among the waitlisted).
         enrollment.Status = CourseEnrollmentStatus.Dropped;
+        enrollment.Position = null;
         await _context.SaveChangesAsync(cancellationToken);
     }
 }

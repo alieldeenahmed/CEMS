@@ -1,3 +1,4 @@
+using CEMS.Application.Common.Concurrency;
 using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Domain.Courses;
@@ -23,10 +24,7 @@ public class EnrollStudentCommandHandler : IRequestHandler<EnrollStudentCommand,
         var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == request.CourseId, cancellationToken)
             ?? throw new NotFoundException(nameof(Course), request.CourseId);
 
-        if (!_currentUser.HasAccessToBranch(course.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(course.BranchId);
 
         var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == request.StudentId, cancellationToken)
             ?? throw new NotFoundException(nameof(Student), request.StudentId);
@@ -35,6 +33,12 @@ public class EnrollStudentCommandHandler : IRequestHandler<EnrollStudentCommand,
         {
             throw new BadRequestException(new[] { "The student's branch does not match the course's branch." });
         }
+
+        // Everything below is check-then-write against the course's enrollment list (already enrolled? is it
+        // full? next waitlist position?). Two simultaneous requests would each see the same answers, so they
+        // are serialized per course. (Unique indexes on the table are the backstop.)
+        await using var transaction = await _context.BeginLockedTransactionAsync(
+            cancellationToken, LockKeys.CourseEnrollments(request.CourseId));
 
         var alreadyEnrolled = await _context.CourseEnrollments.AnyAsync(
             e => e.StudentId == request.StudentId && e.CourseId == request.CourseId
@@ -82,6 +86,7 @@ public class EnrollStudentCommandHandler : IRequestHandler<EnrollStudentCommand,
 
         _context.CourseEnrollments.Add(enrollment);
         await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return new CourseEnrollmentDto(enrollment.Id, enrollment.StudentId, enrollment.CourseId, course.Name, enrollment.EnrollmentDate, enrollment.Status, enrollment.Position);
     }

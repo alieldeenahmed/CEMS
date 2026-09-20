@@ -1,3 +1,4 @@
+using CEMS.Application.Common.Concurrency;
 using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Domain.Payroll;
@@ -38,6 +39,8 @@ public class GenerateStaffPayrollRunCommandHandler : IRequestHandler<GenerateSta
             throw new BadRequestException(new[] { "Staff payroll runs are only for Front Desk and Branch Manager accounts." });
         }
 
+        await using var transaction = await _context.BeginLockedTransactionAsync(cancellationToken, LockKeys.StaffPayroll(request.UserId));
+
         var overlapping = await _context.StaffPayrollRuns.AnyAsync(
             r => r.UserId == request.UserId && r.PeriodStart <= request.PeriodEnd && request.PeriodStart <= r.PeriodEnd,
             cancellationToken);
@@ -59,6 +62,7 @@ public class GenerateStaffPayrollRunCommandHandler : IRequestHandler<GenerateSta
 
         _context.StaffPayrollRuns.Add(run);
         await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return new StaffPayrollRunDto(run.Id, run.UserId, run.PeriodStart, run.PeriodEnd, run.Amount, run.Status);
     }

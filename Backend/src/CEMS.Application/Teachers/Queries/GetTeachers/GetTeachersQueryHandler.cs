@@ -46,7 +46,9 @@ public class GetTeachersQueryHandler : IRequestHandler<GetTeachersQuery, List<Te
         foreach (var teacher in teachers)
         {
             var user = await _identityService.GetAuthenticatedUserAsync(teacher.UserId);
-            result.Add(new TeacherDto(teacher.Id, teacher.UserId, user.FullName, user.Email, teacher.HireDate, teacher.PayType, teacher.PayRate, teacher.BranchIds));
+            var showPay = TeacherDto.CanSeePay(_currentUser, teacher.UserId);
+            result.Add(new TeacherDto(teacher.Id, teacher.UserId, user.FullName, user.Email, teacher.HireDate,
+                showPay ? teacher.PayType : null, showPay ? teacher.PayRate : null, teacher.BranchIds));
         }
 
         return result;

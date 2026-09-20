@@ -22,10 +22,7 @@ public class GetRoomByIdQueryHandler : IRequestHandler<GetRoomByIdQuery, RoomDto
         var room = await _context.Rooms.FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Room), request.Id);
 
-        if (!_currentUser.HasAccessToBranch(room.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(room.BranchId);
 
         return new RoomDto(room.Id, room.BranchId, room.Name, room.Capacity);
     }

@@ -22,10 +22,7 @@ public class GetBranchByIdQueryHandler : IRequestHandler<GetBranchByIdQuery, Bra
         var branch = await _context.Branches.FirstOrDefaultAsync(b => b.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Branch), request.Id);
 
-        if (!_currentUser.HasAccessToBranch(branch.Id))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(branch.Id);
 
         return new BranchDto(branch.Id, branch.Name, branch.Address, branch.Phone, branch.IsActive);
     }

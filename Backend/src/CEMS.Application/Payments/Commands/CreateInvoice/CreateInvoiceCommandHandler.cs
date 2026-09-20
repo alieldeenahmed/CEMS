@@ -23,17 +23,23 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
         var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == request.StudentId, cancellationToken)
             ?? throw new NotFoundException(nameof(Student), request.StudentId);
 
-        if (!_currentUser.HasAccessToBranch(student.CurrentBranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(student.CurrentBranchId);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         decimal amount;
 
         if (request.PackageId.HasValue)
         {
-            var package = await _context.Packages.FirstOrDefaultAsync(p => p.Id == request.PackageId.Value, cancellationToken)
+            var package = await _context.Packages.Include(p => p.Course).FirstOrDefaultAsync(p => p.Id == request.PackageId.Value, cancellationToken)
                 ?? throw new NotFoundException(nameof(Package), request.PackageId.Value);
+
+            // A package belongs to a course at one branch and carries that branch's price; billing a student
+            // from another branch against it would let one branch invoice with another's price list.
+            if (package.Course.BranchId != student.CurrentBranchId)
+            {
+                throw new BadRequestException(new[] { "This package belongs to a course at a different branch than the student." });
+            }
 
             amount = package.Price;
         }
@@ -53,7 +59,7 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
             StudentId = request.StudentId,
             PackageId = request.PackageId,
             Amount = amount,
-            IssuedDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            IssuedDate = today,
             DueDate = request.DueDate,
             Status = InvoiceStatus.Pending
         };
@@ -61,6 +67,6 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
         _context.Invoices.Add(invoice);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return InvoiceDto.FromEntity(invoice, DateOnly.FromDateTime(DateTime.UtcNow));
+        return InvoiceDto.FromEntity(invoice, today);
     }
 }

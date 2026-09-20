@@ -22,10 +22,7 @@ public class UpdateStudentCommandHandler : IRequestHandler<UpdateStudentCommand,
         var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Student), request.Id);
 
-        if (!_currentUser.HasAccessToBranch(student.CurrentBranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(student.CurrentBranchId);
 
         student.FullName = request.FullName;
         student.DateOfBirth = request.DateOfBirth;

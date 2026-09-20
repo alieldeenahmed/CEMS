@@ -8,6 +8,7 @@ using CEMS.Domain.Students;
 using CEMS.Domain.Teachers;
 using CEMS.Domain.Users;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CEMS.Application.Common.Interfaces;
 
@@ -39,4 +40,21 @@ public interface IApplicationDbContext
     DbSet<StaffPayrollRun> StaffPayrollRuns { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Starts a database transaction. A handler needs one only when the operation is genuinely atomic
+    /// across more than one <see cref="SaveChangesAsync"/> (or across Identity and this context, which
+    /// share one connection); a single SaveChangesAsync is already atomic on its own.
+    /// </summary>
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Serializes concurrent "check, then write" sequences on the named resources. Must be called inside
+    /// a transaction: the lock is held until that transaction commits or rolls back, so a competing
+    /// request re-runs its checks only after this one's write is visible. Keys are taken in a fixed
+    /// order, so two requests locking overlapping sets cannot deadlock. On PostgreSQL this is a
+    /// transaction-scoped advisory lock; providers without one (the SQLite test database is
+    /// single-writer) treat it as a no-op.
+    /// </summary>
+    Task AcquireLocksAsync(IEnumerable<string> keys, CancellationToken cancellationToken = default);
 }

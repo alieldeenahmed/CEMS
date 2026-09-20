@@ -18,10 +18,7 @@ public class GetRoomsByBranchQueryHandler : IRequestHandler<GetRoomsByBranchQuer
 
     public async Task<List<RoomDto>> Handle(GetRoomsByBranchQuery request, CancellationToken cancellationToken)
     {
-        if (!_currentUser.HasAccessToBranch(request.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(request.BranchId);
 
         return await _context.Rooms
             .Where(r => r.BranchId == request.BranchId)

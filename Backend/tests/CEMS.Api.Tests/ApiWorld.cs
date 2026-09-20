@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace CEMS.Api.Tests;
@@ -65,6 +65,7 @@ public class ApiWorld : CemsApiFactory
         var curriculum = await CreateAsync("/api/curricula", new { name = "Web & Software", description = "Python and web" });
         Course = await CreateAsync("/api/courses", new { name = "Python Fundamentals", deliveryMode = "Group", curriculumId = curriculum, branchId = Smouha });
         (await Owner.PostAsJsonAsync($"/api/courses/{Course}/enrollments", new { studentId = TaughtStudent })).EnsureSuccessStatusCode();
+        (await Owner.PostAsJsonAsync($"/api/teachers/{TeacherId}/qualifications", new { courseId = Course })).EnsureSuccessStatusCode();
         Session = await CreateAsync($"/api/courses/{Course}/sessions", SessionBody(SmouhaRoom, TeacherId, SessionStart));
 
         ManagerSmouha = await SignInAsync("bm.smouha@codecamp.demo");

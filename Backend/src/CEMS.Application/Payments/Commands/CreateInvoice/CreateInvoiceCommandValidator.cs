@@ -1,3 +1,4 @@
+using CEMS.Application.Common.Validation;
 using FluentValidation;
 
 namespace CEMS.Application.Payments.Commands.CreateInvoice;
@@ -8,6 +9,6 @@ public class CreateInvoiceCommandValidator : AbstractValidator<CreateInvoiceComm
     {
         RuleFor(x => x.StudentId).NotEmpty();
         RuleFor(x => x.DueDate).NotEmpty();
-        RuleFor(x => x.Amount).GreaterThan(0).When(x => x.Amount.HasValue);
+        RuleFor(x => x.Amount).IsMoney().When(x => x.Amount.HasValue);
     }
 }

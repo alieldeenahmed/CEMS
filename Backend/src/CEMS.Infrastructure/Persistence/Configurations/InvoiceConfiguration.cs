@@ -9,6 +9,7 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
     public void Configure(EntityTypeBuilder<Invoice> builder)
     {
         builder.Property(i => i.Amount).HasColumnType("numeric(10,2)");
+        builder.ToTable(t => t.HasCheckConstraint("ck_invoices_amount_positive", "\"Amount\" > 0"));
 
         builder.HasOne(i => i.Student)
             .WithMany()

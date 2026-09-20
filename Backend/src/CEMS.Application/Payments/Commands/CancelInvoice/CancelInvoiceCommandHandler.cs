@@ -1,3 +1,4 @@
+using CEMS.Application.Common.Concurrency;
 using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Domain.Payments;
@@ -19,16 +20,17 @@ public class CancelInvoiceCommandHandler : IRequestHandler<CancelInvoiceCommand,
 
     public async Task<InvoiceDto> Handle(CancelInvoiceCommand request, CancellationToken cancellationToken)
     {
+        // Cancelling races with recording a payment (a payment landing after the "not paid" check would
+        // leave a cancelled invoice with money against it), so it takes the same per-invoice lock.
+        await using var transaction = await _context.BeginLockedTransactionAsync(cancellationToken, LockKeys.Invoice(request.Id));
+
         var invoice = await _context.Invoices
             .Include(i => i.Student)
             .Include(i => i.Payments)
             .FirstOrDefaultAsync(i => i.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Invoice), request.Id);
 
-        if (!_currentUser.HasAccessToBranch(invoice.Student.CurrentBranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(invoice.Student.CurrentBranchId);
 
         if (invoice.Status == InvoiceStatus.Paid)
         {
@@ -42,6 +44,7 @@ public class CancelInvoiceCommandHandler : IRequestHandler<CancelInvoiceCommand,
 
         invoice.Status = InvoiceStatus.Cancelled;
         await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return InvoiceDto.FromEntity(invoice, DateOnly.FromDateTime(DateTime.UtcNow));
     }

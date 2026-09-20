@@ -1,3 +1,4 @@
+using CEMS.Application.Common.Concurrency;
 using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Domain.Courses;
@@ -21,6 +22,11 @@ public class GeneratePayrollRunCommandHandler : IRequestHandler<GeneratePayrollR
     {
         var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.Id == request.TeacherId, cancellationToken)
             ?? throw new NotFoundException(nameof(Teacher), request.TeacherId);
+
+        // "No overlapping run exists" is check-then-insert; without the lock two requests for the same teacher
+        // and period would both pass it and pay the teacher twice. (An exclusion constraint on the table is the
+        // backstop.)
+        await using var transaction = await _context.BeginLockedTransactionAsync(cancellationToken, LockKeys.TeacherPayroll(request.TeacherId));
 
         var overlapping = await _context.PayrollRuns.AnyAsync(
             r => r.TeacherId == request.TeacherId && r.PeriodStart <= request.PeriodEnd && request.PeriodStart <= r.PeriodEnd,
@@ -61,7 +67,7 @@ public class GeneratePayrollRunCommandHandler : IRequestHandler<GeneratePayrollR
                     && teacherCourseIds.Contains(p.Invoice.Package!.CourseId))
                 .SumAsync(p => (decimal?)p.AmountPaid, cancellationToken) ?? 0;
 
-            payrollRun.TotalAmount = revenueCollected * teacher.PayRate / 100m;
+            payrollRun.TotalAmount = Round(revenueCollected * teacher.PayRate / 100m);
         }
         else
         {
@@ -82,9 +88,11 @@ public class GeneratePayrollRunCommandHandler : IRequestHandler<GeneratePayrollR
 
             foreach (var session in sessions)
             {
-                var amount = teacher.PayType == PayType.Hourly
+                // Rounded to the cent per line, because the column holds cents: an unrounded 33.3333 would be
+                // stored as 33.33, and the run's total would no longer equal the sum of its line items.
+                var amount = Round(teacher.PayType == PayType.Hourly
                     ? teacher.PayRate * (decimal)(session.EndUtc - session.StartUtc).TotalHours
-                    : teacher.PayRate;
+                    : teacher.PayRate);
 
                 totalAmount += amount;
 
@@ -102,7 +110,10 @@ public class GeneratePayrollRunCommandHandler : IRequestHandler<GeneratePayrollR
 
         _context.PayrollRuns.Add(payrollRun);
         await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return new PayrollRunDto(payrollRun.Id, payrollRun.TeacherId, payrollRun.PeriodStart, payrollRun.PeriodEnd, payrollRun.TotalAmount, payrollRun.Status);
     }
+
+    private static decimal Round(decimal amount) => Math.Round(amount, 2, MidpointRounding.AwayFromZero);
 }

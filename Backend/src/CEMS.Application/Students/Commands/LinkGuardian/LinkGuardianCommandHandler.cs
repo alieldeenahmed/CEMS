@@ -23,10 +23,7 @@ public class LinkGuardianCommandHandler : IRequestHandler<LinkGuardianCommand>
         var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == request.StudentId, cancellationToken)
             ?? throw new NotFoundException(nameof(Student), request.StudentId);
 
-        if (!_currentUser.HasAccessToBranch(student.CurrentBranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(student.CurrentBranchId);
 
         // A guardian the caller can't see is reported as not found, so linking can't be used to probe another branch's records.
         var guardianExists = await _context.Guardians.VisibleTo(_currentUser).AnyAsync(g => g.Id == request.GuardianId, cancellationToken);

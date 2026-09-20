@@ -9,6 +9,7 @@ public class PackageConfiguration : IEntityTypeConfiguration<Package>
     public void Configure(EntityTypeBuilder<Package> builder)
     {
         builder.Property(p => p.Price).HasColumnType("numeric(10,2)");
+        builder.ToTable(t => t.HasCheckConstraint("ck_packages_price_and_sessions_positive", "\"Price\" > 0 AND \"SessionCount\" > 0"));
 
         builder.HasOne(p => p.Course)
             .WithMany()

@@ -1,4 +1,4 @@
-using CEMS.Application.Common.Exceptions;
+﻿using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Application.Tests.TestSupport;
 using CEMS.Application.Users.Commands.CreateStaffUser;
@@ -155,8 +155,8 @@ public class StaffHandlerTests : SeededHandlerTestBase
         }
 
         Context.Teachers.AddRange(
-            new CEMS.Domain.Teachers.Teacher { Id = Guid.NewGuid(), UserId = teacher.UserId, HireDate = new DateOnly(2024, 1, 1) },
-            new CEMS.Domain.Teachers.Teacher { Id = Guid.NewGuid(), UserId = teacherElsewhere.UserId, HireDate = new DateOnly(2024, 1, 1) });
+            new CEMS.Domain.Teachers.Teacher { Id = Guid.NewGuid(), UserId = teacher.UserId, HireDate = new DateOnly(2024, 1, 1), PayRate = 100 },
+            new CEMS.Domain.Teachers.Teacher { Id = Guid.NewGuid(), UserId = teacherElsewhere.UserId, HireDate = new DateOnly(2024, 1, 1), PayRate = 100 });
         Context.SaveChanges();
         Context.TeacherBranches.Add(new CEMS.Domain.Teachers.TeacherBranch { TeacherId = Context.Teachers.Single(t => t.UserId == teacher.UserId).Id, BranchId = smouha.Id });
         Context.TeacherBranches.Add(new CEMS.Domain.Teachers.TeacherBranch { TeacherId = Context.Teachers.Single(t => t.UserId == teacherElsewhere.UserId).Id, BranchId = kafrAbdo.Id });

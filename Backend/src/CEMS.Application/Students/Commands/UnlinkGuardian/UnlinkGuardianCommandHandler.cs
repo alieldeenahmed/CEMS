@@ -24,10 +24,7 @@ public class UnlinkGuardianCommandHandler : IRequestHandler<UnlinkGuardianComman
             .FirstOrDefaultAsync(sg => sg.StudentId == request.StudentId && sg.GuardianId == request.GuardianId, cancellationToken)
             ?? throw new NotFoundException(nameof(StudentGuardian), $"{request.StudentId}/{request.GuardianId}");
 
-        if (!_currentUser.HasAccessToBranch(link.Student.CurrentBranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(link.Student.CurrentBranchId);
 
         _context.StudentGuardians.Remove(link);
         await _context.SaveChangesAsync(cancellationToken);

@@ -1,9 +1,11 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
 namespace CEMS.Api.Tests;
@@ -18,9 +20,9 @@ public class AuthenticationTests
         return app;
     }
 
-    private static string ForgeToken(string key, string issuer = "CEMS", string audience = "CEMS", DateTime? expires = null, params string[] roles)
+    private static string ForgeToken(string key, string issuer = "CEMS", string audience = "CEMS", DateTime? expires = null, Guid? subject = null, params string[] roles)
     {
-        var claims = new List<Claim> { new(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString()) };
+        var claims = new List<Claim> { new(JwtRegisteredClaimNames.Sub, (subject ?? Guid.NewGuid()).ToString()) };
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
         var token = new JwtSecurityToken(issuer, audience, claims,
             expires: expires ?? DateTime.UtcNow.AddHours(1),
@@ -133,15 +135,29 @@ public class AuthenticationTests
     // ---- What the JWT pipeline accepts ----
 
     [Fact]
-    public async Task AWellFormedToken_SignedWithTheRightKey_IsAccepted_AndItsRolesAreHonoured()
+    public async Task AWellFormedToken_ForARealAccount_IsAccepted_AndItsRolesAreHonoured()
     {
         using var app = await NewAppAsync();
+        var ownerClient = await app.SignInAsOwnerAsync();
+        var ownerId = await FirstUserIdAsync(app);
+        var branch = (await CemsApiFactory.ReadJsonAsync(await ownerClient.PostAsJsonAsync("/api/branches",
+            new { name = "Smouha", address = "14 Fawzy Moaz St", phone = "034567001" }))).GetProperty("id").GetGuid();
+        var deskUser = (await CemsApiFactory.ReadJsonAsync(await ownerClient.PostAsJsonAsync("/api/users/staff",
+            new { email = "desk@codecamp.demo", password = CemsApiFactory.Password, fullName = "Desk", phoneNumber = "0100", role = "FrontDesk", branchId = branch })))
+            .GetProperty("userId").GetGuid();
 
-        var owner = WithToken(app, ForgeToken(CemsApiFactory.SigningKey, roles: "Owner"));
-        var frontDesk = WithToken(app, ForgeToken(CemsApiFactory.SigningKey, roles: "FrontDesk"));
+        var owner = WithToken(app, ForgeToken(CemsApiFactory.SigningKey, subject: ownerId, roles: "Owner"));
+        var frontDesk = WithToken(app, ForgeToken(CemsApiFactory.SigningKey, subject: deskUser, roles: "FrontDesk"));
 
         Assert.Equal(HttpStatusCode.OK, (await owner.GetAsync("/api/students")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await frontDesk.GetAsync("/api/users/staff")).StatusCode);
+    }
+
+    private static async Task<Guid> FirstUserIdAsync(CemsApiFactory app)
+    {
+        using var scope = app.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<CEMS.Infrastructure.Persistence.ApplicationDbContext>();
+        return await context.Users.Select(u => u.Id).FirstAsync();
     }
 
     [Fact]

@@ -22,10 +22,7 @@ public class UpdateCourseCommandHandler : IRequestHandler<UpdateCourseCommand, C
         var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Course), request.Id);
 
-        if (!_currentUser.HasAccessToBranch(course.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(course.BranchId);
 
         course.Name = request.Name;
         course.DeliveryMode = request.DeliveryMode;

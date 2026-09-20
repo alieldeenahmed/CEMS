@@ -38,6 +38,12 @@ public static class DependencyInjection
             options.Password.RequireLowercase = false;
             options.Password.RequireDigit = false;
             options.Password.RequiredUniqueChars = 1;
+
+            // Five wrong passwords lock the account for 15 minutes. The trade-off is deliberate: someone who
+            // knows an address can also lock that account out, so the lock is kept short.
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
         });
 
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));

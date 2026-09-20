@@ -1,4 +1,4 @@
-using CEMS.Application.Common.Exceptions;
+﻿using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Scheduling.Commands.CreateSession;
 using CEMS.Application.Tests.TestSupport;
 using CEMS.Domain.Branches;
@@ -19,11 +19,16 @@ public class CreateSessionCommandHandlerTests : HandlerTestBase
     private Teacher _teacher = null!;
     private Course _course = null!;
 
-    private Teacher AddTeacher(Branch branch, bool withAvailability = true)
+    private Teacher AddTeacher(Branch branch, bool withAvailability = true, bool qualified = true)
     {
         var teacher = new Teacher { Id = Guid.NewGuid(), UserId = Guid.NewGuid(), HireDate = new DateOnly(2024, 1, 1), PayType = PayType.Hourly, PayRate = 100 };
         Context.Teachers.Add(teacher);
         Context.TeacherBranches.Add(new TeacherBranch { TeacherId = teacher.Id, BranchId = branch.Id });
+
+        if (qualified)
+        {
+            Context.TeacherCourseQualifications.Add(new TeacherCourseQualification { TeacherId = teacher.Id, CourseId = _course.Id });
+        }
 
         if (withAvailability)
         {

@@ -32,10 +32,7 @@ public class CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, C
             throw new NotFoundException(nameof(Branch), request.BranchId);
         }
 
-        if (!_currentUser.HasAccessToBranch(request.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(request.BranchId);
 
         var course = new Course
         {

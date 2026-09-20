@@ -45,7 +45,7 @@ public class AuditLoggingBehaviorTests
     }
 
     [Fact]
-    public async Task Command_Fails_LogsWarningAndRethrowsTheOriginalException()
+    public async Task Command_Fails_RethrowsTheOriginalException_AndLogsOnlyAtDebug_BecauseTheHttpLayerLogsTheFailure()
     {
         var logger = new CapturingLogger<AuditLoggingBehavior<ResetSomethingCommand, string>>();
         var behavior = new AuditLoggingBehavior<ResetSomethingCommand, string>(logger, _user);
@@ -54,7 +54,7 @@ public class AuditLoggingBehaviorTests
             behavior.Handle(new ResetSomethingCommand("hunter2"), _ => throw new InvalidOperationException("boom"), CancellationToken.None));
 
         var entry = Assert.Single(logger.Entries);
-        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Equal(LogLevel.Debug, entry.Level);   // one Warning/Information/Error per failure, written by GlobalExceptionHandler
         Assert.Contains("failed", entry.Message);
         Assert.Contains("InvalidOperationException", entry.Message);
     }
@@ -68,6 +68,39 @@ public class AuditLoggingBehaviorTests
         await behavior.Handle(new ResetSomethingCommand("hunter2"), _ => Task.FromResult("ok"), CancellationToken.None);
 
         Assert.DoesNotContain(logger.Entries, e => e.Message.Contains("hunter2"));
+    }
+
+    private record ChangeSomethingCommand(Guid StudentId, Guid? CourseId, Guid? Unset, string Email, string Password, decimal Amount) : IRequest<string>;
+
+    [Fact]
+    public async Task Command_LogsTheIdsOfTheRecordsItTargeted_AndNothingElseAboutThePayload()
+    {
+        var logger = new CapturingLogger<AuditLoggingBehavior<ChangeSomethingCommand, string>>();
+        var behavior = new AuditLoggingBehavior<ChangeSomethingCommand, string>(logger, _user);
+        var student = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var course = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+
+        await behavior.Handle(new ChangeSomethingCommand(student, course, null, "mariam@codecamp.demo", "S3cret-Pass!", 1234.56m),
+            _ => Task.FromResult("ok"), CancellationToken.None);
+
+        var message = Assert.Single(logger.Entries).Message;
+        Assert.Contains($"StudentId={student}", message);
+        Assert.Contains($"CourseId={course}", message);
+        Assert.DoesNotContain("Unset", message);            // a null id is omitted
+        Assert.DoesNotContain("mariam@codecamp.demo", message);
+        Assert.DoesNotContain("S3cret-Pass!", message);
+        Assert.DoesNotContain("1234.56", message);
+    }
+
+    [Fact]
+    public async Task Command_WithNoIdProperties_StillLogs_WithADashForTargets()
+    {
+        var logger = new CapturingLogger<AuditLoggingBehavior<ResetSomethingCommand, string>>();
+        var behavior = new AuditLoggingBehavior<ResetSomethingCommand, string>(logger, _user);
+
+        await behavior.Handle(new ResetSomethingCommand("hunter2"), _ => Task.FromResult("ok"), CancellationToken.None);
+
+        Assert.Contains("targeting -", Assert.Single(logger.Entries).Message);
     }
 
     [Fact]

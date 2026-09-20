@@ -23,10 +23,7 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
         var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == request.CourseId, cancellationToken)
             ?? throw new NotFoundException(nameof(Course), request.CourseId);
 
-        if (!_currentUser.HasAccessToBranch(course.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(course.BranchId);
 
         var package = new Package
         {

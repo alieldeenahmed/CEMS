@@ -1,4 +1,4 @@
-using CEMS.Application.Common.Exceptions;
+﻿using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Payments;
 using CEMS.Application.Payments.Commands.CancelInvoice;
 using CEMS.Application.Payments.Commands.CreateInvoice;
@@ -147,14 +147,42 @@ public class InvoiceLifecycleTests : HandlerTestBase
     }
 
     [Fact]
-    public async Task RecordPayment_Overpayment_StillMarksInvoicePaid()
+    public async Task RecordPayment_MoreThanTheRemainingBalance_IsRejected_AndNothingIsRecorded()
     {
         Seed();
         var invoiceId = await CreateInvoice(1000);
+        await Pay(invoiceId, 400);
 
-        await Pay(invoiceId, 1500);
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => Pay(invoiceId, 700));
+
+        Assert.Contains("remaining balance of 600.00", ex.Errors.Single());
+        Context.ChangeTracker.Clear();
+        Assert.Equal(InvoiceStatus.PartiallyPaid, StatusOf(invoiceId));
+        Assert.Single(Context.Payments);
+    }
+
+    [Fact]
+    public async Task RecordPayment_ExactlyTheRemainingBalance_SettlesTheInvoice()
+    {
+        Seed();
+        var invoiceId = await CreateInvoice(1000);
+        await Pay(invoiceId, 400);
+
+        await Pay(invoiceId, 600);
 
         Assert.Equal(InvoiceStatus.Paid, StatusOf(invoiceId));
+    }
+
+    [Fact]
+    public async Task RecordPayment_OnAFullyPaidInvoice_IsRejected()
+    {
+        Seed();
+        var invoiceId = await CreateInvoice(1000);
+        await Pay(invoiceId, 1000);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => Pay(invoiceId, 1));
+
+        Assert.Contains("already fully paid", ex.Errors.Single());
     }
 
     [Fact]

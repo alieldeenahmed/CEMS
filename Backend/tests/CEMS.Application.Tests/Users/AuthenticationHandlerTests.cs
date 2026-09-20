@@ -7,7 +7,7 @@ using CEMS.Domain.Users;
 
 namespace CEMS.Application.Tests.Users;
 
-public class AuthenticationHandlerTests
+public class AuthenticationHandlerTests : HandlerTestBase
 {
     private class StubTokenGenerator : IJwtTokenGenerator
     {
@@ -70,7 +70,7 @@ public class AuthenticationHandlerTests
     [Fact]
     public async Task BootstrapOwner_OnAnEmptySystem_CreatesTheOwnerAndReturnsAToken()
     {
-        var result = await new BootstrapOwnerCommandHandler(_identity, _tokens)
+        var result = await new BootstrapOwnerCommandHandler(Context, _identity, _tokens)
             .Handle(new BootstrapOwnerCommand("owner@codecamp.demo", "DemoPass123", "Mostafa El-Sayed", "01012340001"), CancellationToken.None);
 
         Assert.Equal(("owner@codecamp.demo", RoleNames.Owner), Assert.Single(_identity.CreatedUsers));
@@ -83,7 +83,7 @@ public class AuthenticationHandlerTests
         _identity.AddUser(User("someone@codecamp.demo", RoleNames.FrontDesk));
 
         await Assert.ThrowsAsync<ForbiddenAccessException>(() =>
-            new BootstrapOwnerCommandHandler(_identity, _tokens)
+            new BootstrapOwnerCommandHandler(Context, _identity, _tokens)
                 .Handle(new BootstrapOwnerCommand("attacker@evil.test", "Password123", "Attacker", "0100"), CancellationToken.None));
 
         Assert.Empty(_identity.CreatedUsers);
@@ -95,7 +95,7 @@ public class AuthenticationHandlerTests
         _identity.CreateUserErrors = ["Password is too weak."];
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() =>
-            new BootstrapOwnerCommandHandler(_identity, _tokens)
+            new BootstrapOwnerCommandHandler(Context, _identity, _tokens)
                 .Handle(new BootstrapOwnerCommand("owner@codecamp.demo", "weakpass", "Owner", "0100"), CancellationToken.None));
 
         Assert.Equal(["Password is too weak."], ex.Errors);

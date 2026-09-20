@@ -10,6 +10,7 @@ public class ExamConfiguration : IEntityTypeConfiguration<Exam>
     {
         builder.Property(e => e.Name).IsRequired().HasMaxLength(200);
         builder.Property(e => e.MaxScore).HasColumnType("numeric(6,2)");
+        builder.ToTable(t => t.HasCheckConstraint("ck_exams_max_score_positive", "\"MaxScore\" > 0"));
 
         builder.HasOne(e => e.Course)
             .WithMany()

@@ -1,3 +1,4 @@
+using CEMS.Application.Common.Validation;
 using FluentValidation;
 
 namespace CEMS.Application.Payroll.Commands.UpdateStaffPayrollRun;
@@ -6,6 +7,6 @@ public class UpdateStaffPayrollRunCommandValidator : AbstractValidator<UpdateSta
 {
     public UpdateStaffPayrollRunCommandValidator()
     {
-        RuleFor(x => x.Amount).GreaterThan(0);
+        RuleFor(x => x.Amount).IsMoney();
     }
 }

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using CEMS.Api.Auth;
 using CEMS.Api.Middleware;
 using CEMS.Api.Services;
 using CEMS.Application;
@@ -26,12 +27,14 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "for local development, or as the ConnectionStrings__Default environment variable in any other environment.");
 }
 
-var jwtKey = builder.Configuration["Jwt:Key"];
-if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
+var jwtProblems = jwtSettings.Validate();
+if (jwtProblems.Count > 0)
 {
     throw new InvalidOperationException(
-        "Jwt:Key is not configured or is shorter than 32 characters. Set it with 'dotnet user-secrets set \"Jwt:Key\" \"<value>\"' " +
-        "for local development, or as the Jwt__Key environment variable in any other environment.");
+        "The JWT configuration is invalid: " + string.Join(" ", jwtProblems) +
+        " Set the key with 'dotnet user-secrets set \"Jwt:Key\" \"<value>\"' for local development, or as the " +
+        "Jwt__Key environment variable in any other environment.");
 }
 
 // Add services to the container.
@@ -65,8 +68,6 @@ builder.Services.AddCors(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
-
 builder.Services
     .AddAuthentication(options =>
     {
@@ -86,6 +87,30 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
+        };
+
+        // A signed token proves who someone was when it was issued, not that they are still allowed in:
+        // without this, a deactivated account (or one whose roles/branches changed) would keep its old access
+        // until the token expires. Each request re-checks the account and uses its current roles and branches.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = CurrentAccountValidator.ValidateAsync,
+            OnAuthenticationFailed = context =>
+            {
+                context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("CEMS.Auth")
+                    .LogInformation("Bearer token rejected on {Method} {Path}: {Reason}",
+                        context.Request.Method, context.Request.Path, context.Exception.GetType().Name);
+                return Task.CompletedTask;
+            },
+            OnForbidden = context =>
+            {
+                var user = new CurrentUserService(new HttpContextAccessor { HttpContext = context.HttpContext });
+                context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("CEMS.Auth")
+                    .LogWarning("Access denied on {Method} {Path} for user {UserId} ({Roles}) from {ClientIp}",
+                        context.Request.Method, context.Request.Path, user.UserId, string.Join(",", user.Roles),
+                        context.HttpContext.Connection.RemoteIpAddress);
+                return Task.CompletedTask;
+            }
         };
     });
 

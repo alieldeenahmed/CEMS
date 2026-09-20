@@ -22,10 +22,7 @@ public class DeleteRoomCommandHandler : IRequestHandler<DeleteRoomCommand>
         var room = await _context.Rooms.FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Room), request.Id);
 
-        if (!_currentUser.HasAccessToBranch(room.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(room.BranchId);
 
         if (await _context.CourseSessions.AnyAsync(s => s.RoomId == request.Id, cancellationToken))
         {

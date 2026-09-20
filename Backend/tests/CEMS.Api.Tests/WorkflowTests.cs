@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -12,6 +12,8 @@ namespace CEMS.Api.Tests;
 /// </summary>
 public class WorkflowTests
 {
+    private static string Today => DateTime.UtcNow.ToString("yyyy-MM-dd");
+
     private static async Task<ApiWorld> NewWorld()
     {
         var world = new ApiWorld();
@@ -56,13 +58,13 @@ public class WorkflowTests
         Assert.Equal("Pending", Status(await Get(w.FrontDeskSmouha, $"/api/invoices/{invoice}")));
 
         // 600 of 2400 is a quarter: the invoice must stay partially paid (regression: any payment over 50% used to mark it paid).
-        await Post(w.FrontDeskSmouha, $"/api/invoices/{invoice}/payments", new { amountPaid = 600, paymentDate = "2030-01-10", method = "Cash" });
+        await Post(w.FrontDeskSmouha, $"/api/invoices/{invoice}/payments", new { amountPaid = 600, paymentDate = Today, method = "Cash" });
         var partial = await Get(w.FrontDeskSmouha, $"/api/invoices/{invoice}");
         Assert.Equal("PartiallyPaid", Status(partial));
         Assert.Equal(1800m, partial.GetProperty("balanceRemaining").GetDecimal());
         Assert.Equal(1800m, (await Get(w.FrontDeskSmouha, $"/api/students/{w.TaughtStudent}/balance")).GetProperty("totalOutstanding").GetDecimal());
 
-        await Post(w.FrontDeskSmouha, $"/api/invoices/{invoice}/payments", new { amountPaid = 1800, paymentDate = "2030-01-20", method = "Card" });
+        await Post(w.FrontDeskSmouha, $"/api/invoices/{invoice}/payments", new { amountPaid = 1800, paymentDate = Today, method = "Card" });
         Assert.Equal("Paid", Status(await Get(w.FrontDeskSmouha, $"/api/invoices/{invoice}")));
         Assert.Equal(2, (await Get(w.FrontDeskSmouha, $"/api/invoices/{invoice}/payments")).GetArrayLength());
         Assert.Single((await Get(w.FrontDeskSmouha, $"/api/students/{w.TaughtStudent}/invoices")).EnumerateArray());
@@ -75,13 +77,13 @@ public class WorkflowTests
         var package = await w.CreateAsync($"/api/courses/{w.Course}/packages", new { sessionCount = 12, price = 2400 });
         var paidInvoice = await w.CreateAsync($"/api/students/{w.TaughtStudent}/invoices", new { packageId = package, dueDate = "2030-02-01" });
         var openInvoice = await w.CreateAsync($"/api/students/{w.TaughtStudent}/invoices", new { amount = 150, dueDate = "2030-02-01" });
-        await Post(w.Owner, $"/api/invoices/{paidInvoice}/payments", new { amountPaid = 2400, paymentDate = "2030-01-10", method = "Transfer" });
+        await Post(w.Owner, $"/api/invoices/{paidInvoice}/payments", new { amountPaid = 2400, paymentDate = Today, method = "Transfer" });
 
         Assert.Equal(HttpStatusCode.Forbidden, (await w.FrontDeskSmouha.PostAsync($"/api/invoices/{openInvoice}/cancel", null)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await w.ManagerSmouha.PostAsync($"/api/invoices/{paidInvoice}/cancel", null)).StatusCode);
         Assert.Equal("Cancelled", Status(await Json(await w.ManagerSmouha.PostAsync($"/api/invoices/{openInvoice}/cancel", null))));
         Assert.Equal(HttpStatusCode.BadRequest,
-            (await w.Owner.PostAsJsonAsync($"/api/invoices/{openInvoice}/payments", new { amountPaid = 10, paymentDate = "2030-01-11", method = "Cash" })).StatusCode);
+            (await w.Owner.PostAsJsonAsync($"/api/invoices/{openInvoice}/payments", new { amountPaid = 10, paymentDate = Today, method = "Cash" })).StatusCode);
 
         var repriced = await Json(await w.ManagerSmouha.PutAsJsonAsync($"/api/packages/{package}", new { sessionCount = 12, price = 3000 }));
         Assert.Equal(3000m, repriced.GetProperty("price").GetDecimal());
@@ -138,6 +140,7 @@ public class WorkflowTests
         var tinyRoom = await w.CreateAsync($"/api/branches/{w.Smouha}/rooms", new { name = "Booth", capacity = 1 });
         var curriculum = await w.CreateAsync("/api/curricula", new { name = "1:1", description = "one on one" });
         var course = await w.CreateAsync("/api/courses", new { name = "JavaScript 1:1", deliveryMode = "OneOnOne", curriculumId = curriculum, branchId = w.Smouha });
+        await Post(w.Owner, $"/api/teachers/{w.TeacherId}/qualifications", new { courseId = course });
         await w.CreateAsync($"/api/courses/{course}/sessions", ApiWorld.SessionBody(tinyRoom, w.TeacherId, ApiWorld.SessionStart.AddDays(7)));
 
         var first = await Post(w.FrontDeskSmouha, $"/api/courses/{course}/enrollments", new { studentId = w.TaughtStudent });
@@ -149,10 +152,15 @@ public class WorkflowTests
         Assert.Equal(HttpStatusCode.BadRequest,
             (await w.FrontDeskSmouha.PostAsJsonAsync($"/api/courses/{course}/enrollments", new { studentId = w.UntaughtStudent })).StatusCode);   // already waitlisted
 
-        var promoted = await Post(w.FrontDeskSmouha, $"/api/courses/enrollments/{second.GetProperty("id").GetGuid()}/promote");
+        // The course is still full, so the waitlisted student cannot be promoted yet...
+        var secondId = second.GetProperty("id").GetGuid();
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.FrontDeskSmouha.PostAsync($"/api/courses/enrollments/{secondId}/promote", null)).StatusCode);
+
+        // ...until a seat opens up.
+        Assert.Equal(HttpStatusCode.NoContent, (await w.FrontDeskSmouha.DeleteAsync($"/api/courses/enrollments/{first.GetProperty("id").GetGuid()}")).StatusCode);
+        var promoted = await Post(w.FrontDeskSmouha, $"/api/courses/enrollments/{secondId}/promote");
         Assert.Equal("Active", Status(promoted));
 
-        Assert.Equal(HttpStatusCode.NoContent, (await w.FrontDeskSmouha.DeleteAsync($"/api/courses/enrollments/{first.GetProperty("id").GetGuid()}")).StatusCode);
         var enrollments = await Get(w.ManagerSmouha, $"/api/courses/{course}/enrollments");
         Assert.Equal(["Active", "Dropped"], enrollments.EnumerateArray().Select(Status).OrderBy(s => s).ToArray());
         Assert.Equal(2, (await Get(w.FrontDeskSmouha, $"/api/students/{w.TaughtStudent}/enrollments")).GetArrayLength());
@@ -195,7 +203,6 @@ public class WorkflowTests
     {
         using var w = await NewWorld();
 
-        await Post(w.ManagerSmouha, $"/api/teachers/{w.TeacherId}/qualifications", new { courseId = w.Course });
         var qualified = await Get(w.Teacher, $"/api/teachers/{w.TeacherId}/qualifications");
         Assert.Equal("Python Fundamentals", qualified.EnumerateArray().Single().GetProperty("courseName").GetString());
         Assert.Equal(HttpStatusCode.NoContent, (await w.ManagerSmouha.DeleteAsync($"/api/teachers/{w.TeacherId}/qualifications/{w.Course}")).StatusCode);
@@ -210,6 +217,12 @@ public class WorkflowTests
         var sara = await w.CreateAsync("/api/teachers", new { userId, hireDate = "2024-06-01", payType = "PerSession", payRate = 100 });
         (await w.Owner.PostAsJsonAsync($"/api/teachers/{sara}/branches", new { branchId = w.Smouha })).EnsureSuccessStatusCode();
         await Post(w.Owner, $"/api/teachers/{sara}/availability", new { branchId = w.Smouha, dayOfWeek = "Monday", startTime = "09:00", endTime = "17:00" });
+
+        // Not yet qualified for the course: refused, and no override can waive it.
+        var refused = await w.ManagerSmouha.PostAsJsonAsync($"/api/sessions/{w.Session}/substitute-teacher", new { newTeacherId = sara, @override = true, overrideReason = "Emergency" });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("not qualified", await refused.Content.ReadAsStringAsync());
+        await Post(w.ManagerSmouha, $"/api/teachers/{sara}/qualifications", new { courseId = w.Course });
 
         var substituted = await Post(w.ManagerSmouha, $"/api/sessions/{w.Session}/substitute-teacher", new { newTeacherId = sara, @override = false, overrideReason = (string?)null });
         Assert.Equal(sara, substituted.GetProperty("teacherId").GetGuid());

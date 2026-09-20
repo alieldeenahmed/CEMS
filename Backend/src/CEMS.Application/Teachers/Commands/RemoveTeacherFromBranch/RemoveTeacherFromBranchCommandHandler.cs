@@ -23,10 +23,7 @@ public class RemoveTeacherFromBranchCommandHandler : IRequestHandler<RemoveTeach
             .FirstOrDefaultAsync(tb => tb.TeacherId == request.TeacherId && tb.BranchId == request.BranchId, cancellationToken)
             ?? throw new NotFoundException(nameof(TeacherBranch), $"{request.TeacherId}/{request.BranchId}");
 
-        if (!_currentUser.HasAccessToBranch(request.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(request.BranchId);
 
         _context.TeacherBranches.Remove(link);
         await _context.SaveChangesAsync(cancellationToken);

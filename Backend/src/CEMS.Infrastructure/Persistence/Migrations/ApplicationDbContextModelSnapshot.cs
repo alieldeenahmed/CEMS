@@ -158,9 +158,15 @@ namespace CEMS.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CourseId");
+                    b.HasIndex("CourseId", "Position")
+                        .IsUnique()
+                        .HasDatabaseName("ux_course_enrollments_waitlist_position")
+                        .HasFilter("\"Position\" IS NOT NULL");
 
-                    b.HasIndex("StudentId");
+                    b.HasIndex("StudentId", "CourseId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_course_enrollments_live_per_student_course")
+                        .HasFilter("\"Status\" <> 1");
 
                     b.ToTable("CourseEnrollments");
                 });
@@ -212,7 +218,10 @@ namespace CEMS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TeacherId");
 
-                    b.ToTable("CourseSessions");
+                    b.ToTable("CourseSessions", t =>
+                        {
+                            t.HasCheckConstraint("ck_course_sessions_end_after_start", "\"EndUtc\" > \"StartUtc\"");
+                        });
                 });
 
             modelBuilder.Entity("CEMS.Domain.Courses.Curriculum", b =>
@@ -260,7 +269,10 @@ namespace CEMS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CourseId");
 
-                    b.ToTable("Exams");
+                    b.ToTable("Exams", t =>
+                        {
+                            t.HasCheckConstraint("ck_exams_max_score_positive", "\"MaxScore\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("CEMS.Domain.Exams.Grade", b =>
@@ -295,7 +307,10 @@ namespace CEMS.Infrastructure.Persistence.Migrations
                     b.HasIndex("ExamId", "StudentId")
                         .IsUnique();
 
-                    b.ToTable("Grades");
+                    b.ToTable("Grades", t =>
+                        {
+                            t.HasCheckConstraint("ck_grades_score_not_negative", "\"Score\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("CEMS.Domain.Payments.Invoice", b =>
@@ -328,7 +343,10 @@ namespace CEMS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("StudentId");
 
-                    b.ToTable("Invoices");
+                    b.ToTable("Invoices", t =>
+                        {
+                            t.HasCheckConstraint("ck_invoices_amount_positive", "\"Amount\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("CEMS.Domain.Payments.Package", b =>
@@ -350,7 +368,10 @@ namespace CEMS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CourseId");
 
-                    b.ToTable("Packages");
+                    b.ToTable("Packages", t =>
+                        {
+                            t.HasCheckConstraint("ck_packages_price_and_sessions_positive", "\"Price\" > 0 AND \"SessionCount\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("CEMS.Domain.Payments.Payment", b =>
@@ -378,7 +399,10 @@ namespace CEMS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("InvoiceId");
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", t =>
+                        {
+                            t.HasCheckConstraint("ck_payments_amount_positive", "\"AmountPaid\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("CEMS.Domain.Payroll.PayrollLineItem", b =>
@@ -430,7 +454,10 @@ namespace CEMS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TeacherId");
 
-                    b.ToTable("PayrollRuns");
+                    b.ToTable("PayrollRuns", t =>
+                        {
+                            t.HasCheckConstraint("ck_payroll_runs_period_ordered", "\"PeriodEnd\" >= \"PeriodStart\"");
+                        });
                 });
 
             modelBuilder.Entity("CEMS.Domain.Payroll.StaffPayrollRun", b =>
@@ -456,7 +483,10 @@ namespace CEMS.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("StaffPayrollRuns");
+                    b.ToTable("StaffPayrollRuns", t =>
+                        {
+                            t.HasCheckConstraint("ck_staff_payroll_runs_valid", "\"Amount\" > 0 AND \"PeriodEnd\" >= \"PeriodStart\"");
+                        });
                 });
 
             modelBuilder.Entity("CEMS.Domain.Students.Guardian", b =>
@@ -598,7 +628,10 @@ namespace CEMS.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Teachers");
+                    b.ToTable("Teachers", t =>
+                        {
+                            t.HasCheckConstraint("ck_teachers_pay_rate_positive", "\"PayRate\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("CEMS.Domain.Teachers.TeacherAvailability", b =>

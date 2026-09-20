@@ -27,10 +27,7 @@ public class CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand,
             throw new NotFoundException(nameof(Branch), request.BranchId);
         }
 
-        if (!_currentUser.HasAccessToBranch(request.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(request.BranchId);
 
         Guid guardianId;
         if (request.ExistingGuardianId.HasValue)

@@ -1,4 +1,4 @@
-using CEMS.Application.Attendance.Commands.MarkAttendance;
+﻿using CEMS.Application.Attendance.Commands.MarkAttendance;
 using CEMS.Application.Attendance.Queries.GetAttendanceForSession;
 using CEMS.Application.Attendance.Queries.GetAttendanceForStudent;
 using CEMS.Application.Common.Exceptions;
@@ -71,12 +71,12 @@ public class SessionReadAndCancelTests : SeededHandlerTestBase
     }
 
     [Fact]
-    public async Task Cancel_ToAMakeupSessionThatDoesNotExist_ThrowsNotFoundAndKeepsTheSessionScheduled()
+    public async Task Cancel_ToAMakeupSessionThatDoesNotExist_IsRejectedAndKeepsTheSessionScheduled()
     {
         var session = AddSession(_course, _room, _teacher, FutureStart);
         ActAs(RoleNames.Owner);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        await Assert.ThrowsAsync<BadRequestException>(() =>
             new CancelSessionCommandHandler(Context, CurrentUser).Handle(new CancelSessionCommand(session.Id, Guid.NewGuid()), CancellationToken.None));
 
         Assert.Equal(SessionStatus.Scheduled, Context.CourseSessions.Single().Status);

@@ -1,8 +1,7 @@
+using CEMS.Application.Common.Concurrency;
 using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Domain.Courses;
-using CEMS.Domain.Teachers;
-using CEMS.Domain.Users;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,10 +25,7 @@ public class SubstituteSessionTeacherCommandHandler : IRequestHandler<Substitute
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken)
             ?? throw new NotFoundException(nameof(CourseSession), request.SessionId);
 
-        if (!_currentUser.HasAccessToBranch(session.Course.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(session.Course.BranchId);
 
         if (session.Status == SessionStatus.Cancelled)
         {
@@ -46,84 +42,44 @@ public class SubstituteSessionTeacherCommandHandler : IRequestHandler<Substitute
             throw new BadRequestException(new[] { "This teacher is already assigned to this session." });
         }
 
-        var teacherExists = await _context.Teachers.AnyAsync(t => t.Id == request.NewTeacherId, cancellationToken);
-        if (!teacherExists)
-        {
-            throw new NotFoundException(nameof(Teacher), request.NewTeacherId);
-        }
+        await SessionRules.EnsureTeacherCanTeachAsync(
+            _context, request.NewTeacherId, session.CourseId, session.Course.BranchId, cancellationToken);
 
-        var teacherAssignedToBranch = await _context.TeacherBranches
-            .AnyAsync(tb => tb.TeacherId == request.NewTeacherId && tb.BranchId == session.Course.BranchId, cancellationToken);
+        // Same race as creating a session: lock the incoming teacher so two concurrent bookings of them
+        // are checked one after the other. The room is not changing, so it needs no lock.
+        await using var transaction = await _context.BeginLockedTransactionAsync(
+            cancellationToken, LockKeys.Teacher(request.NewTeacherId));
 
-        if (!teacherAssignedToBranch)
-        {
-            throw new BadRequestException(new[] { "This teacher is not assigned to the course's branch." });
-        }
+        // Only the new teacher's double-booking and availability need checking; the session being
+        // reassigned is excluded from its own conflict check.
+        var conflicts = await SessionRules.FindConflictsAsync(
+            _context, null, request.NewTeacherId, session.Course.BranchId, session.StartUtc, session.EndUtc, session.Id, cancellationToken);
 
-        var conflicts = new List<string>();
-
-        // The room's booking for this slot is unaffected -- only the teacher is changing -- so only
-        // the new teacher's double-booking and declared availability need checking, and the session
-        // being reassigned is excluded from its own conflict check.
-        var teacherConflict = await _context.CourseSessions.AnyAsync(
-            s => s.Id != session.Id
-                && s.TeacherId == request.NewTeacherId
-                && s.Status != SessionStatus.Cancelled
-                && s.StartUtc < session.EndUtc
-                && session.StartUtc < s.EndUtc,
-            cancellationToken);
-
-        if (teacherConflict)
-        {
-            conflicts.Add("The teacher is already booked for an overlapping time slot.");
-        }
-
-        var sessionDayOfWeek = session.StartUtc.DayOfWeek;
-        var sessionStartTime = TimeOnly.FromDateTime(session.StartUtc);
-        var sessionEndTime = TimeOnly.FromDateTime(session.EndUtc);
-
-        var isWithinAvailability = await _context.TeacherAvailabilities.AnyAsync(
-            a => a.TeacherId == request.NewTeacherId
-                && a.BranchId == session.Course.BranchId
-                && a.DayOfWeek == sessionDayOfWeek
-                && a.StartTime <= sessionStartTime
-                && a.EndTime >= sessionEndTime,
-            cancellationToken);
-
-        if (!isWithinAvailability)
-        {
-            conflicts.Add("The session falls outside the teacher's declared availability for this branch.");
-        }
-
-        var hasConflicts = conflicts.Count > 0;
-
-        if (hasConflicts && !request.Override)
-        {
-            throw new SchedulingConflictException(conflicts);
-        }
-
-        if (hasConflicts && request.Override)
-        {
-            if (!_currentUser.IsInRole(RoleNames.Owner) && !_currentUser.IsInRole(RoleNames.BranchManager))
-            {
-                throw new ForbiddenAccessException("Only Owner or BranchManager can override a scheduling conflict.");
-            }
-
-            if (string.IsNullOrWhiteSpace(request.OverrideReason))
-            {
-                throw new BadRequestException(new[] { "An override reason is required when overriding a scheduling conflict." });
-            }
-        }
+        SessionRules.EnsureConflictsMayProceed(_currentUser, conflicts, request.Override, request.OverrideReason);
 
         session.TeacherId = request.NewTeacherId;
-        session.Overridden = hasConflicts;
-        session.OverrideReason = hasConflicts ? request.OverrideReason : null;
-        session.OverriddenByUserId = hasConflicts ? _currentUser.UserId : null;
+
+        if (conflicts.Count > 0)
+        {
+            // Escalate, never erase: a session that was already booked by override keeps that record, and
+            // a new override is added to it rather than replacing it.
+            session.OverrideReason = AppendReason(session.OverrideReason, request.OverrideReason!);
+            session.Overridden = true;
+            session.OverriddenByUserId = _currentUser.UserId;
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return new CourseSessionDto(
             session.Id, session.CourseId, session.RoomId, session.TeacherId, session.StartUtc, session.EndUtc,
             session.Status, session.Overridden, session.OverrideReason, session.RescheduledToSessionId);
+    }
+
+    private static string AppendReason(string? existing, string added)
+    {
+        const int maxLength = 500;
+        var combined = string.IsNullOrWhiteSpace(existing) ? added : $"{existing} | Substitution: {added}";
+        return combined.Length <= maxLength ? combined : combined[..maxLength];
     }
 }

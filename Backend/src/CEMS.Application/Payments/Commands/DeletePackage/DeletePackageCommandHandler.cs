@@ -24,10 +24,7 @@ public class DeletePackageCommandHandler : IRequestHandler<DeletePackageCommand>
             .FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Package), request.Id);
 
-        if (!_currentUser.HasAccessToBranch(package.Course.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(package.Course.BranchId);
 
         _context.Packages.Remove(package);
 

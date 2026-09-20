@@ -9,6 +9,7 @@ public class TeacherConfiguration : IEntityTypeConfiguration<Teacher>
     public void Configure(EntityTypeBuilder<Teacher> builder)
     {
         builder.Property(t => t.PayRate).HasColumnType("numeric(10,2)");
+        builder.ToTable(t => t.HasCheckConstraint("ck_teachers_pay_rate_positive", "\"PayRate\" > 0"));
         builder.HasIndex(t => t.UserId).IsUnique();
     }
 }

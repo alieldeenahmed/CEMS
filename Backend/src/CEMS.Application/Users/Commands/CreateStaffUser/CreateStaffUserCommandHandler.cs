@@ -43,6 +43,11 @@ public class CreateStaffUserCommandHandler : IRequestHandler<CreateStaffUserComm
             }
         }
 
+        // The account, its role, and its branch assignment are one operation: a FrontDesk account with no
+        // branch assignment can log in but see nothing, and retrying would then fail on "email taken".
+        // Identity shares this DbContext, so one transaction covers all three writes.
+        await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
+
         var result = await _identityService.CreateUserAsync(
             request.Email, request.Password, request.FullName, request.PhoneNumber, request.Role);
 
@@ -62,6 +67,8 @@ public class CreateStaffUserCommandHandler : IRequestHandler<CreateStaffUserComm
 
             await _context.SaveChangesAsync(cancellationToken);
         }
+
+        await transaction.CommitAsync(cancellationToken);
 
         var authenticatedUser = await _identityService.GetAuthenticatedUserAsync(result.UserId);
 

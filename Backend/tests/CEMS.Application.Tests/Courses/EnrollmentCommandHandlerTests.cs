@@ -1,5 +1,6 @@
-using CEMS.Application.Common.Exceptions;
+﻿using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Courses;
+using CEMS.Application.Courses.Commands.DropEnrollment;
 using CEMS.Application.Courses.Commands.EnrollStudent;
 using CEMS.Application.Courses.Commands.PromoteFromWaitlist;
 using CEMS.Application.Tests.TestSupport;
@@ -168,17 +169,48 @@ public class EnrollmentCommandHandlerTests : HandlerTestBase
     }
 
     [Fact]
-    public async Task Promote_WaitlistedEnrollment_BecomesActiveAndLosesPosition()
+    public async Task Promote_WaitlistedEnrollment_OnceASeatOpens_BecomesActiveAndLosesPosition()
     {
         Seed(roomCapacity: 1);
-        await Enroll(AddStudent());
+        var first = await Enroll(AddStudent());
         var waitlisted = await Enroll(AddStudent());
+        await new DropEnrollmentCommandHandler(Context, CurrentUser).Handle(new DropEnrollmentCommand(first.Id), CancellationToken.None);
 
         var promoted = await new PromoteFromWaitlistCommandHandler(Context, CurrentUser)
             .Handle(new PromoteFromWaitlistCommand(waitlisted.Id), CancellationToken.None);
 
         Assert.Equal(CourseEnrollmentStatus.Active, promoted.Status);
         Assert.Null(promoted.Position);
+    }
+
+    [Fact]
+    public async Task Promote_WhileTheCourseIsStillFull_IsRejected_SoCapacityCannotBeBypassed()
+    {
+        Seed(roomCapacity: 1);
+        await Enroll(AddStudent());
+        var waitlisted = await Enroll(AddStudent());
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() =>
+            new PromoteFromWaitlistCommandHandler(Context, CurrentUser).Handle(new PromoteFromWaitlistCommand(waitlisted.Id), CancellationToken.None));
+
+        Assert.Contains("still full", ex.Errors.Single());
+        Context.ChangeTracker.Clear();
+        Assert.Equal(CourseEnrollmentStatus.Waitlisted, Context.CourseEnrollments.Single(e => e.Id == waitlisted.Id).Status);
+    }
+
+    [Fact]
+    public async Task Drop_AWaitlistedEnrollment_ReleasesItsQueuePosition()
+    {
+        Seed(roomCapacity: 1);
+        await Enroll(AddStudent());
+        var waitlisted = await Enroll(AddStudent());
+
+        await new DropEnrollmentCommandHandler(Context, CurrentUser).Handle(new DropEnrollmentCommand(waitlisted.Id), CancellationToken.None);
+
+        Context.ChangeTracker.Clear();
+        var dropped = Context.CourseEnrollments.Single(e => e.Id == waitlisted.Id);
+        Assert.Equal(CourseEnrollmentStatus.Dropped, dropped.Status);
+        Assert.Null(dropped.Position);
     }
 
     [Fact]

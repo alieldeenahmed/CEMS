@@ -24,10 +24,7 @@ public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand,
             .FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Package), request.Id);
 
-        if (!_currentUser.HasAccessToBranch(package.Course.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(package.Course.BranchId);
 
         package.SessionCount = request.SessionCount;
         package.Price = request.Price;

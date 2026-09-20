@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using CEMS.Infrastructure.Persistence;
@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace CEMS.Api.Tests;
 
@@ -39,27 +40,42 @@ public class CemsApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         _connection.Open();
     }
 
+    /// <summary>Every log line the running app writes, for tests that assert on what is (and is not) logged.</summary>
+    public LogSink Logs { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.ConfigureLogging(logging => logging.AddProvider(Logs));
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
             services.RemoveAll(typeof(IDbContextOptionsConfiguration<ApplicationDbContext>));
-            services.AddDbContext<ApplicationDbContext>(options => options.UseSqlite(_connection));
+            ConfigureDatabase(services);
         });
     }
+
+    /// <summary>The database the app talks to; a subclass can point it at PostgreSQL instead.</summary>
+    protected virtual void ConfigureDatabase(IServiceCollection services) =>
+        services.AddDbContext<ApplicationDbContext>(options => options.UseSqlite(_connection));
+
+    /// <summary>Creates the schema. The SQLite database is built from the model; PostgreSQL runs the real migrations.</summary>
+    protected virtual Task CreateSchemaAsync(ApplicationDbContext context) => context.Database.EnsureCreatedAsync();
 
     /// <summary>Creates the schema and the four roles (migrations seed them in production).</summary>
     public virtual async Task InitializeAsync()
     {
         using var scope = Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        await context.Database.EnsureCreatedAsync();
+        await CreateSchemaAsync(context);
 
+        // Migrations seed the roles; a schema built from the model does not.
         var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
         foreach (var role in new[] { "Owner", "BranchManager", "Teacher", "FrontDesk" })
         {
-            await roles.CreateAsync(new IdentityRole<Guid>(role));
+            if (!await roles.RoleExistsAsync(role))
+            {
+                await roles.CreateAsync(new IdentityRole<Guid>(role));
+            }
         }
     }
 

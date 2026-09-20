@@ -1,3 +1,4 @@
+using CEMS.Application.Common.Validation;
 using FluentValidation;
 
 namespace CEMS.Application.Payments.Commands.CreatePackage;
@@ -8,6 +9,6 @@ public class CreatePackageCommandValidator : AbstractValidator<CreatePackageComm
     {
         RuleFor(x => x.CourseId).NotEmpty();
         RuleFor(x => x.SessionCount).GreaterThan(0);
-        RuleFor(x => x.Price).GreaterThan(0);
+        RuleFor(x => x.Price).IsMoney();
     }
 }

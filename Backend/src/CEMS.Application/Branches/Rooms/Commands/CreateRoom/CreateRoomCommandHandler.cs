@@ -25,10 +25,7 @@ public class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand, RoomD
             throw new NotFoundException(nameof(Branch), request.BranchId);
         }
 
-        if (!_currentUser.HasAccessToBranch(request.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(request.BranchId);
 
         var room = new Room
         {

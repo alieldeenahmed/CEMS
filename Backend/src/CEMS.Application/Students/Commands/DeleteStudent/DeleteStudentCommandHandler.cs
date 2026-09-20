@@ -22,10 +22,7 @@ public class DeleteStudentCommandHandler : IRequestHandler<DeleteStudentCommand>
         var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Student), request.Id);
 
-        if (!_currentUser.HasAccessToBranch(student.CurrentBranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(student.CurrentBranchId);
 
         // A student with enrollments, attendance, grades, or invoices has records that must survive them
         // (billing in particular), and the database refuses the delete anyway -- so say why, rather than

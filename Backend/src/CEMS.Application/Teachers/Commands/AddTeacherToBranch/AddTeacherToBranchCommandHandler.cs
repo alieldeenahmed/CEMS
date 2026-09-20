@@ -32,10 +32,7 @@ public class AddTeacherToBranchCommandHandler : IRequestHandler<AddTeacherToBran
             throw new NotFoundException(nameof(Branch), request.BranchId);
         }
 
-        if (!_currentUser.HasAccessToBranch(request.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(request.BranchId);
 
         var alreadyAssigned = await _context.TeacherBranches
             .AnyAsync(tb => tb.TeacherId == request.TeacherId && tb.BranchId == request.BranchId, cancellationToken);

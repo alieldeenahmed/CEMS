@@ -1,9 +1,8 @@
+using CEMS.Application.Common.Concurrency;
 using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Domain.Branches;
 using CEMS.Domain.Courses;
-using CEMS.Domain.Teachers;
-using CEMS.Domain.Users;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,10 +24,7 @@ public class CreateSessionCommandHandler : IRequestHandler<CreateSessionCommand,
         var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == request.CourseId, cancellationToken)
             ?? throw new NotFoundException(nameof(Course), request.CourseId);
 
-        if (!_currentUser.HasAccessToBranch(course.BranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(course.BranchId);
 
         var room = await _context.Rooms.FirstOrDefaultAsync(r => r.Id == request.RoomId, cancellationToken)
             ?? throw new NotFoundException(nameof(Room), request.RoomId);
@@ -38,82 +34,21 @@ public class CreateSessionCommandHandler : IRequestHandler<CreateSessionCommand,
             throw new BadRequestException(new[] { "The room does not belong to the course's branch." });
         }
 
-        var teacherExists = await _context.Teachers.AnyAsync(t => t.Id == request.TeacherId, cancellationToken);
-        if (!teacherExists)
-        {
-            throw new NotFoundException(nameof(Teacher), request.TeacherId);
-        }
+        await SessionRules.EnsureTeacherCanTeachAsync(_context, request.TeacherId, course.Id, course.BranchId, cancellationToken);
 
-        var teacherAssignedToBranch = await _context.TeacherBranches
-            .AnyAsync(tb => tb.TeacherId == request.TeacherId && tb.BranchId == course.BranchId, cancellationToken);
+        // Check-then-insert is a race: two requests for the same room or teacher could both find the slot
+        // free and both insert. Taking the room and teacher locks first makes the second request wait,
+        // then see the first one's session when it runs its checks. (The overlap exclusion constraints in
+        // the database are the backstop if a code path ever skips this.)
+        await using var transaction = await _context.BeginLockedTransactionAsync(
+            cancellationToken, LockKeys.Room(request.RoomId), LockKeys.Teacher(request.TeacherId));
 
-        if (!teacherAssignedToBranch)
-        {
-            throw new BadRequestException(new[] { "This teacher is not assigned to the course's branch." });
-        }
+        var conflicts = await SessionRules.FindConflictsAsync(
+            _context, request.RoomId, request.TeacherId, course.BranchId, request.StartUtc, request.EndUtc, null, cancellationToken);
 
-        var conflicts = new List<string>();
-
-        var roomConflict = await _context.CourseSessions.AnyAsync(
-            s => s.RoomId == request.RoomId
-                && s.Status != SessionStatus.Cancelled
-                && s.StartUtc < request.EndUtc
-                && request.StartUtc < s.EndUtc,
-            cancellationToken);
-
-        if (roomConflict)
-        {
-            conflicts.Add("The room is already booked for an overlapping time slot.");
-        }
-
-        var teacherConflict = await _context.CourseSessions.AnyAsync(
-            s => s.TeacherId == request.TeacherId
-                && s.Status != SessionStatus.Cancelled
-                && s.StartUtc < request.EndUtc
-                && request.StartUtc < s.EndUtc,
-            cancellationToken);
-
-        if (teacherConflict)
-        {
-            conflicts.Add("The teacher is already booked for an overlapping time slot.");
-        }
-
-        var sessionDayOfWeek = request.StartUtc.DayOfWeek;
-        var sessionStartTime = TimeOnly.FromDateTime(request.StartUtc);
-        var sessionEndTime = TimeOnly.FromDateTime(request.EndUtc);
-
-        var isWithinAvailability = await _context.TeacherAvailabilities.AnyAsync(
-            a => a.TeacherId == request.TeacherId
-                && a.BranchId == course.BranchId
-                && a.DayOfWeek == sessionDayOfWeek
-                && a.StartTime <= sessionStartTime
-                && a.EndTime >= sessionEndTime,
-            cancellationToken);
-
-        if (!isWithinAvailability)
-        {
-            conflicts.Add("The session falls outside the teacher's declared availability for this branch.");
-        }
+        SessionRules.EnsureConflictsMayProceed(_currentUser, conflicts, request.Override, request.OverrideReason);
 
         var hasConflicts = conflicts.Count > 0;
-
-        if (hasConflicts && !request.Override)
-        {
-            throw new SchedulingConflictException(conflicts);
-        }
-
-        if (hasConflicts && request.Override)
-        {
-            if (!_currentUser.IsInRole(RoleNames.Owner) && !_currentUser.IsInRole(RoleNames.BranchManager))
-            {
-                throw new ForbiddenAccessException("Only Owner or BranchManager can override a scheduling conflict.");
-            }
-
-            if (string.IsNullOrWhiteSpace(request.OverrideReason))
-            {
-                throw new BadRequestException(new[] { "An override reason is required when overriding a scheduling conflict." });
-            }
-        }
 
         var session = new CourseSession
         {
@@ -131,6 +66,7 @@ public class CreateSessionCommandHandler : IRequestHandler<CreateSessionCommand,
 
         _context.CourseSessions.Add(session);
         await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return new CourseSessionDto(
             session.Id, session.CourseId, session.RoomId, session.TeacherId, session.StartUtc, session.EndUtc,

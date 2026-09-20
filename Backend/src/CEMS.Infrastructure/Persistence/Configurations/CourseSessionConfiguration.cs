@@ -10,6 +10,10 @@ public class CourseSessionConfiguration : IEntityTypeConfiguration<CourseSession
     {
         builder.Property(s => s.OverrideReason).HasMaxLength(500);
 
+        // Also a precondition of the overlap exclusion constraint (see the AddSchedulingOverlapConstraints
+        // migration), whose tstzrange(start, end) raises an error for an inverted range.
+        builder.ToTable(t => t.HasCheckConstraint("ck_course_sessions_end_after_start", "\"EndUtc\" > \"StartUtc\""));
+
         builder.HasOne(s => s.Course)
             .WithMany()
             .HasForeignKey(s => s.CourseId)

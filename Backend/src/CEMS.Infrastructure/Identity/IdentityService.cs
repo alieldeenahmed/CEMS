@@ -1,4 +1,4 @@
-using CEMS.Application.Common.Exceptions;
+﻿using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -27,13 +27,30 @@ public class IdentityService : IIdentityService
             PhoneNumber = phoneNumber
         };
 
+        // Creating the user and giving them their role are two writes; they must succeed or fail together,
+        // or a failed role assignment would leave an account that can log in but has no role. If the caller
+        // already opened a transaction (it shares this DbContext), that one is used instead.
+        await using var ownTransaction = _context.Database.CurrentTransaction is null
+            ? await _context.Database.BeginTransactionAsync()
+            : null;
+
         var result = await _userManager.CreateAsync(user, password);
         if (!result.Succeeded)
         {
             return new CreateUserResult(false, Guid.Empty, result.Errors.Select(e => e.Description).ToList());
         }
 
-        await _userManager.AddToRoleAsync(user, roleName);
+        var roleResult = await _userManager.AddToRoleAsync(user, roleName);
+        if (!roleResult.Succeeded)
+        {
+            // Not committing rolls the user back too.
+            return new CreateUserResult(false, Guid.Empty, roleResult.Errors.Select(e => e.Description).ToList());
+        }
+
+        if (ownTransaction is not null)
+        {
+            await ownTransaction.CommitAsync();
+        }
 
         return new CreateUserResult(true, user.Id, Array.Empty<string>());
     }
@@ -46,12 +63,22 @@ public class IdentityService : IIdentityService
             return null;
         }
 
-        var isPasswordValid = await _userManager.CheckPasswordAsync(user, password);
-        if (!isPasswordValid)
+        // Repeated wrong passwords lock the account for a while (see the Lockout options in
+        // DependencyInjection). A locked account answers exactly like a wrong password, so an attacker
+        // learns nothing extra -- not even that the lock has kicked in.
+        if (await _userManager.IsLockedOutAsync(user))
         {
             return null;
         }
 
+        var isPasswordValid = await _userManager.CheckPasswordAsync(user, password);
+        if (!isPasswordValid)
+        {
+            await _userManager.AccessFailedAsync(user);
+            return null;
+        }
+
+        await _userManager.ResetAccessFailedCountAsync(user);
         return await BuildAuthenticatedUserAsync(user);
     }
 
@@ -97,7 +124,12 @@ public class IdentityService : IIdentityService
             ?? throw new NotFoundException(nameof(ApplicationUser), userId);
 
         user.IsActive = isActive;
-        await _userManager.UpdateAsync(user);
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"Could not update user '{userId}': {string.Join("; ", result.Errors.Select(e => e.Description))}");
+        }
     }
 
     public async Task<ResetPasswordResult> ResetPasswordAsync(Guid userId, string newPassword)
@@ -123,6 +155,12 @@ public class IdentityService : IIdentityService
             return new ResetPasswordResult(false, policyErrors);
         }
 
+        // Removing the old password and adding the new one are two writes; if the second failed after the
+        // first, the account would be left with no password at all.
+        await using var ownTransaction = _context.Database.CurrentTransaction is null
+            ? await _context.Database.BeginTransactionAsync()
+            : null;
+
         var removeResult = await _userManager.RemovePasswordAsync(user);
         if (!removeResult.Succeeded)
         {
@@ -133,6 +171,11 @@ public class IdentityService : IIdentityService
         if (!addResult.Succeeded)
         {
             return new ResetPasswordResult(false, addResult.Errors.Select(e => e.Description).ToList());
+        }
+
+        if (ownTransaction is not null)
+        {
+            await ownTransaction.CommitAsync();
         }
 
         return new ResetPasswordResult(true, Array.Empty<string>());

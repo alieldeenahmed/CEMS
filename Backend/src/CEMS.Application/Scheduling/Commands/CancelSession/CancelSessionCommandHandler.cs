@@ -24,17 +24,23 @@ public class CancelSessionCommandHandler : IRequestHandler<CancelSessionCommand,
             .FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(CourseSession), request.Id);
 
-        if (!_currentUser.HasAccessToBranch(session.Course.BranchId))
+        _currentUser.EnsureAccessToBranch(session.Course.BranchId);
+
+        if (session.Status != SessionStatus.Scheduled)
         {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
+            throw new BadRequestException(new[] { $"Only a scheduled session can be cancelled; this one is {session.Status}." });
         }
 
         if (request.RescheduledToSessionId.HasValue)
         {
-            var replacementExists = await _context.CourseSessions.AnyAsync(s => s.Id == request.RescheduledToSessionId.Value, cancellationToken);
-            if (!replacementExists)
+            // A replacement is a session of the same course; without this a manager could point a
+            // cancelled session at any session in the system, including another branch's.
+            var replacementIsValid = request.RescheduledToSessionId.Value != session.Id
+                && await _context.CourseSessions.AnyAsync(
+                    s => s.Id == request.RescheduledToSessionId.Value && s.CourseId == session.CourseId, cancellationToken);
+            if (!replacementIsValid)
             {
-                throw new NotFoundException(nameof(CourseSession), request.RescheduledToSessionId.Value);
+                throw new BadRequestException(new[] { "The replacement must be a different session of the same course." });
             }
         }
 

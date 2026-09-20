@@ -42,6 +42,9 @@ public class GetTeacherByIdQueryHandler : IRequestHandler<GetTeacherByIdQuery, T
 
         var user = await _identityService.GetAuthenticatedUserAsync(teacher.UserId);
 
-        return new TeacherDto(teacher.Id, teacher.UserId, user.FullName, user.Email, teacher.HireDate, teacher.PayType, teacher.PayRate, branchIds);
+        var showPay = TeacherDto.CanSeePay(_currentUser, teacher.UserId);
+
+        return new TeacherDto(teacher.Id, teacher.UserId, user.FullName, user.Email, teacher.HireDate,
+            showPay ? teacher.PayType : null, showPay ? teacher.PayRate : null, branchIds);
     }
 }

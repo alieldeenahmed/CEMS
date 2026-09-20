@@ -1,6 +1,8 @@
+using CEMS.Application.Common.Concurrency;
 using CEMS.Application.Common.Exceptions;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Domain.Branches;
+using CEMS.Domain.Courses;
 using CEMS.Domain.Students;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -20,13 +22,14 @@ public class TransferStudentBranchCommandHandler : IRequestHandler<TransferStude
 
     public async Task<StudentDto> Handle(TransferStudentBranchCommand request, CancellationToken cancellationToken)
     {
+        // Read the student's current branch only once the lock is held: two simultaneous transfers would
+        // otherwise both record the same "from" branch and leave the history contradicting the student.
+        await using var transaction = await _context.BeginLockedTransactionAsync(cancellationToken, LockKeys.StudentBranch(request.StudentId));
+
         var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == request.StudentId, cancellationToken)
             ?? throw new NotFoundException(nameof(Student), request.StudentId);
 
-        if (!_currentUser.HasAccessToBranch(student.CurrentBranchId))
-        {
-            throw new ForbiddenAccessException("You do not have access to this branch.");
-        }
+        _currentUser.EnsureAccessToBranch(student.CurrentBranchId);
 
         var newBranchExists = await _context.Branches.AnyAsync(b => b.Id == request.NewBranchId, cancellationToken);
         if (!newBranchExists)
@@ -37,6 +40,17 @@ public class TransferStudentBranchCommandHandler : IRequestHandler<TransferStude
         if (request.NewBranchId == student.CurrentBranchId)
         {
             throw new BadRequestException(new[] { "This student is already at that branch." });
+        }
+
+        // Enrollments belong to courses at one branch, and a student may only be enrolled in their own branch's
+        // courses. Moving them while they still hold a seat (or a waitlist place) would silently break that, so
+        // the old enrollments must be dropped first -- an explicit decision, not a side effect of the transfer.
+        var hasLiveEnrollments = await _context.CourseEnrollments.AnyAsync(
+            e => e.StudentId == student.Id && e.Status != CourseEnrollmentStatus.Dropped, cancellationToken);
+
+        if (hasLiveEnrollments)
+        {
+            throw new BadRequestException(new[] { "This student still has active or waitlisted enrollments at their current branch. Drop them before transferring." });
         }
 
         _context.StudentBranchHistories.Add(new StudentBranchHistory
@@ -53,6 +67,7 @@ public class TransferStudentBranchCommandHandler : IRequestHandler<TransferStude
         student.CurrentBranchId = request.NewBranchId;
 
         await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return StudentDto.FromEntity(student);
     }

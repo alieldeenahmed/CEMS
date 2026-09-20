@@ -1,4 +1,5 @@
 using CEMS.Domain.Teachers;
+using CEMS.Application.Common.Validation;
 using FluentValidation;
 
 namespace CEMS.Application.Teachers.Commands.CreateTeacher;
@@ -10,7 +11,7 @@ public class CreateTeacherCommandValidator : AbstractValidator<CreateTeacherComm
         RuleFor(x => x.UserId).NotEmpty();
         RuleFor(x => x.HireDate).NotEmpty();
         RuleFor(x => x.PayType).IsInEnum();
-        RuleFor(x => x.PayRate).GreaterThan(0);
+        RuleFor(x => x.PayRate).IsMoney();
         RuleFor(x => x.PayRate)
             .LessThanOrEqualTo(100)
             .When(x => x.PayType == PayType.Percentage)
