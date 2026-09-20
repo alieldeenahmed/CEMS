@@ -33,6 +33,15 @@ describe('TeachersPage', () => {
     expect(screen.getByText('Percentage · 40%')).toBeInTheDocument()
   })
 
+  it('shows no pay badge when the server withholds pay (the front desk is not sent it)', async () => {
+    mockApi({ ...routes, 'GET /teachers': [{ ...ahmed, payType: null, payRate: null }] })
+    renderApp(<TeachersPage />, { roles: ['FrontDesk'], branchIds: [SMOUHA.id] })
+
+    expect(await screen.findByText('Ahmed Nabil')).toBeInTheDocument()
+    expect(screen.queryByText(/Hourly/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/null/)).not.toBeInTheDocument()
+  })
+
   it('searches by name or email', async () => {
     mockApi(routes)
     const { user } = renderApp(<TeachersPage />)

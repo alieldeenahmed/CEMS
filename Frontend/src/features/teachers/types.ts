@@ -18,8 +18,9 @@ export interface Teacher {
   fullName: string
   email: string
   hireDate: string
-  payType: PayType
-  payRate: number
+  /** Null when the signed-in user is not allowed to see pay (e.g. the front desk). */
+  payType: PayType | null
+  payRate: number | null
   branchIds: string[]
 }
 

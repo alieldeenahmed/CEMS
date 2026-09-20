@@ -214,6 +214,18 @@ describe('booking a session', () => {
     expect(await screen.findByText("The room does not belong to the course's branch.")).toBeInTheDocument()
   })
 
+  it('explains that an unqualified teacher cannot be booked, and offers no override for it (it is not a conflict)', async () => {
+    mockApi({ ...routes, 'POST /courses/c1/sessions': respond(400, { title: 'Bad request', errors: ['This teacher is not qualified to teach this course.'] }) })
+    const { user } = await open()
+
+    await fillSlot(user)
+    await user.click(screen.getByRole('button', { name: 'Schedule session' }))
+
+    expect(await screen.findByText('This teacher is not qualified to teach this course.')).toBeInTheDocument()
+    expect(screen.queryByText('Scheduling conflict')).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Reason for overriding this conflict')).not.toBeInTheDocument()
+  })
+
   it('shows a permission message rather than a vague failure on a 403', async () => {
     mockApi({ ...routes, 'POST /courses/c1/sessions': respond(403, { title: 'You do not have access to this branch.' }) })
     const { user } = await open()

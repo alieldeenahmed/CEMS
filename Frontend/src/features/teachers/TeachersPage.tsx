@@ -92,9 +92,11 @@ export function TeachersPage() {
                     </p>
                   </div>
 
-                  <span className="rounded-full bg-ochre/10 px-2.5 py-0.5 text-xs font-medium text-ochre">
-                    {PAY_TYPE_LABELS[teacher.payType]} · {teacher.payType === 'Percentage' ? `${teacher.payRate}%` : teacher.payRate}
-                  </span>
+                  {teacher.payType && (
+                    <span className="rounded-full bg-ochre/10 px-2.5 py-0.5 text-xs font-medium text-ochre">
+                      {PAY_TYPE_LABELS[teacher.payType]} · {teacher.payType === 'Percentage' ? `${teacher.payRate}%` : teacher.payRate}
+                    </span>
+                  )}
 
                   {isOwner && (
                     <>

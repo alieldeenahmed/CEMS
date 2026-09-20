@@ -73,7 +73,7 @@ export function PaymentsSection({
               {...register('amountPaid', { required: true, valueAsNumber: true })}
             />
           </div>
-          <input type="date" {...register('paymentDate', { required: true })} className="rounded-md border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-navy" />
+          <input type="date" max={new Date().toISOString().slice(0, 10)} {...register('paymentDate', { required: true })} className="rounded-md border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-navy" />
           <Select {...register('method')} className="w-32">
             <option value="Cash">Cash</option>
             <option value="Card">Card</option>
