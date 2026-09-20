@@ -7,8 +7,27 @@ on:
 
 jobs:
   backend:
-    name: Backend (build + test)
+    name: Backend (build + test, incl. PostgreSQL)
     runs-on: ubuntu-latest
+
+    # A real PostgreSQL for CEMS.Postgres.Tests: migrations, exclusion constraints, advisory locks and
+    # genuinely concurrent requests can't be tested on SQLite. It is a throwaway container of the runner's own.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      CEMS_TEST_POSTGRES: Host=localhost;Username=postgres;Password=postgres
+
     steps:
       - uses: actions/checkout@v4
 
@@ -22,7 +41,7 @@ jobs:
       - name: Build
         run: dotnet build Backend/CEMS.sln --configuration Release --no-restore
 
-      - name: Test
+      - name: Test (unit, integration, PostgreSQL)
         run: dotnet test Backend/CEMS.sln --configuration Release --no-build --verbosity normal
 
   frontend:

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Populates a fresh `cems` database with a realistic demo dataset by driving the real API
     end-to-end (not raw SQL inserts) -- every row here passes through the actual business logic
@@ -162,6 +162,11 @@ Invoke-Api POST "/api/courses/$($scratchCourseKafrAbdo.id)/enrollments" $ownerTo
 Invoke-Api POST "/api/courses/$($scratchCourseKafrAbdo.id)/enrollments" $ownerToken @{ studentId = $studentRana.id } | Out-Null
 
 Write-Host "  5 active enrollments"
+
+# A teacher can only be scheduled for a course they are qualified to teach (structural rule; no override).
+Invoke-Api POST "/api/teachers/$($teacherSmouha.id)/qualifications" $ownerToken @{ courseId = $pythonCourseSmouha.id } | Out-Null
+Invoke-Api POST "/api/teachers/$($teacherSmouha.id)/qualifications" $ownerToken @{ courseId = $webDevCourseSmouha.id } | Out-Null
+Invoke-Api POST "/api/teachers/$($teacherKafrAbdo.id)/qualifications" $ownerToken @{ courseId = $scratchCourseKafrAbdo.id } | Out-Null
 
 # --- 8. Scheduled sessions -----------------------------------------------------------------------
 Write-Host "`n[8/12] Scheduling sessions..." -ForegroundColor Yellow

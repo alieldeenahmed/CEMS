@@ -33,7 +33,7 @@ That constraint is what makes the system non-trivial. It isn't a CRUD demo with 
 - Every non-Owner request is scoped to the caller's own branch(es) at the query/handler level (`ICurrentUserService.HasAccessToBranch`), reading branch membership from JWT claims — not a client-side filter
 - Teachers are **floating**: a `TeacherBranch` join table lets one teacher be assigned to multiple branches, each with its own declared availability
 - Branch Managers get a branch-scoped staff roster (`GET /users/staff/my-branch`) that a Teacher's own branch — resolved from their `TeacherBranch` record, not the general `UserBranchAssignment` table used by BranchManager/FrontDesk — has to be looked up correctly for password resets and access checks
-- `TeacherCourseQualification` records which courses a teacher is *declared qualified* to teach, separate from `CourseSession.TeacherId` (what they're actually scheduled for) — a standalone staffing record, not wired into scheduling conflict checks
+- `TeacherCourseQualification` declares which courses a teacher may teach, and scheduling enforces it: a teacher who is not qualified for the course cannot be booked into a session or substituted into one, and no override can waive that (it is a structural rule, like the teacher being assigned to the branch)
 
 ### 👥 Student & Academic Management
 - **Branch transfer with history**: `POST /students/{id}/transfer-branch` updates the student's current branch and writes an immutable `StudentBranchHistory` row (from, to, date, reason, who did it) — access to the student moves to the new branch's manager immediately
@@ -43,9 +43,10 @@ That constraint is what makes the system non-trivial. It isn't a CRUD demo with 
 
 ### 📅 Scheduling
 - `CreateSessionCommandHandler` checks three independent conflict types before allowing a session: room double-booking, teacher double-booking, and the session falling outside the teacher's declared `TeacherAvailability` window for that branch
-- Conflicts are split into **structural** (room/branch mismatch, teacher not assigned to the branch — never overridable) and **conflict checks** (double-booking, availability — overridable only by Owner/BranchManager, and only with a required `OverrideReason` that's persisted on the session)
+- Conflicts are split into **structural** (room/branch mismatch, teacher not assigned to the branch, teacher not qualified for the course — never overridable) and **conflict checks** (double-booking, availability — overridable only by Owner/BranchManager, and only with a required `OverrideReason` that's persisted on the session)
 - A detected, non-overridden conflict throws a dedicated `SchedulingConflictException`, mapped by the global exception handler to `409 Conflict` with the specific conflict list in the response body
-- `POST /sessions/{id}/substitute-teacher` reassigns an already-scheduled session to a different teacher in place, running the exact same conflict/override logic as creating one — blocked for a cancelled or already-started session
+- **Concurrent bookings can't double-book.** Creating a session and substituting a teacher are check-then-write sequences, so each takes a PostgreSQL advisory lock on the room and teacher involved before checking, and the database refuses overlapping ordinary sessions outright with `EXCLUDE USING gist` constraints (see *Engineering Decisions*). A session that a manager knowingly overrides is exempt, and says so on the row
+- `POST /sessions/{id}/substitute-teacher` reassigns an already-scheduled session to a different teacher in place, running the exact same conflict/override logic as creating one (one shared `SessionRules` class, so the two can't drift) — blocked for a cancelled or already-started session. A substitution never erases an earlier override: reasons accumulate on the session
 - `TeacherId` lives on the **session**, not the course, so one course can already be split across multiple teachers/groups with no schema change
 
 ### 📚 Enrollment & Capacity
@@ -71,7 +72,7 @@ That constraint is what makes the system non-trivial. It isn't a CRUD demo with 
 - Every run — teacher or staff — prints as a real PDF pay stub (`IPayStubGenerator` → `QuestPdfPayStubGenerator`)
 
 ### 🔐 Security & Authorization
-- JWT Bearer auth (`ASP.NET Identity` + `AddJwtBearer`) with issuer/audience/lifetime validation and zero clock skew; branch membership travels as `branch_id` claims on the token itself
+- JWT Bearer auth (`ASP.NET Identity` + `AddJwtBearer`) with issuer/audience/lifetime validation and zero clock skew. The token names who you are; **on every request the API re-reads the account**, so a deactivated account is locked out immediately and the roles and branches used for authorization are the account's current ones, not those frozen into the token. Five wrong passwords lock an account for 15 minutes
 - Two-layer RBAC: broad `[Authorize(Roles = ...)]` at the controller, and a precise `HasAccessToBranch(branchId)` check inside the handler for the specific record being touched
 - A global `IExceptionHandler` (`GlobalExceptionHandler`) centralizes every failure mode — validation, not-found, forbidden, scheduling conflict — into a consistent `ProblemDetails` response carrying a `traceId`, so no controller has its own try/catch
 - Admin-assisted password reset (`POST /users/staff/{id}/reset-password`) with the same branch/role boundary as staff creation — no email involved
@@ -107,7 +108,7 @@ Every request goes through MediatR: 16 controllers dispatch to 114 command/query
 
 The interesting part of this system isn't the entities — it's the rules layered on top of them.
 
-**Scheduling conflicts** are computed, not stored: `CreateSessionCommandHandler` runs three independent overlap queries (room, teacher, teacher-availability) against `CourseSession` and `TeacherAvailability` on every create, distinguishes which conflicts are structurally impossible to override from which can be overridden by an Owner/BranchManager with a recorded reason, and persists that override decision (`Overridden`, `OverrideReason`, `OverriddenByUserId`) on the session itself for audit purposes.
+**Scheduling conflicts** are computed, not stored: `CreateSessionCommandHandler` runs three independent checks (room, teacher, teacher-availability) against `CourseSession` and `TeacherAvailability` on every create, under a per-room/per-teacher lock, distinguishes which conflicts are structurally impossible to override (including a teacher who is not qualified for the course) from which can be overridden by an Owner/BranchManager with a recorded reason, and persists that override decision (`Overridden`, `OverrideReason`, `OverriddenByUserId`) on the session itself for audit purposes.
 
 **Branch isolation** isn't a query filter bolted onto the DbContext — it's an explicit check (`_currentUser.HasAccessToBranch(...)`) inside each handler that touches branch-owned data, which means a handler can apply different logic depending on *why* access is being checked: `ResetStaffPasswordCommandHandler`, for instance, has to resolve a Teacher's branch from `TeacherBranch` specifically, because `UserBranchAssignment` (used for BranchManager/FrontDesk) is always empty for a Teacher — a distinction covered by a dedicated regression test (see Testing).
 
@@ -117,7 +118,7 @@ The interesting part of this system isn't the entities — it's the rules layere
 
 ## Database Design
 
-PostgreSQL via EF Core 9 / Npgsql, 16 migrations, 21 domain entities across 8 modules (Branches, Students, Teachers, Courses, Attendance, Exams, Payments, Payroll). A handful of genuine unique constraints exist beyond primary keys: one attendance record per student per session, one grade per student per exam, and one teacher profile per user.
+PostgreSQL via EF Core 9 / Npgsql, 18 migrations, 21 domain entities across 8 modules (Branches, Students, Teachers, Courses, Attendance, Exams, Payments, Payroll). Beyond primary keys the database enforces invariants directly: one attendance record per student per session, one grade per student per exam, one teacher profile per user, one *live* (active or waitlisted) enrollment per student per course (a dropped one may coexist, which is how re-enrolling works), unique waitlist positions per course, `EXCLUDE USING gist` constraints that stop overlapping ordinary sessions for a room or teacher and overlapping payroll periods for a teacher or staff member, and check constraints for positive amounts, ordered periods and end-after-start sessions.
 
 ```mermaid
 erDiagram
@@ -178,39 +179,50 @@ React 19 + TypeScript, built with Vite. Routing is `react-router-dom`, with a `P
 
 ## Testing
 
-**423 backend tests and 262 frontend tests**, all run in CI. Measured line coverage is **98.4% for the backend** (EF migrations excluded — they're generated code) and **98.9% for the frontend** (92.2% branch coverage). Coverage isn't padded with trivial assertions: the tests are what exposed the defects listed below.
+**525 backend tests and 264 frontend tests.** Merged line coverage is about **98% for the backend** (all three suites together, generated EF migrations excluded) and **98.9% for the frontend** (92% branch). The tests are not padded: they are what found the defects listed below.
 
-**Backend — two xUnit projects, no mocking library.**
+**Backend — three xUnit projects, no mocking library.**
 
-| Project | Tests | What it exercises |
-|---|---|---|
-| `CEMS.Application.Tests` | 291 | Every command/query handler family against a real `ApplicationDbContext` on SQLite in-memory (`EnsureCreated`, not mocks), with hand-written fakes for `ICurrentUserService`/`IIdentityService`. Includes the real MediatR pipeline (validation + audit logging), the real ASP.NET Identity/JWT code, and the real QuestPDF/ClosedXML generators. Analytics tests assert hand-computed numbers, not just "returns something". |
-| `CEMS.Api.Tests` | 132 | The whole HTTP stack through `WebApplicationFactory<Program>`: real routing, JWT auth, model binding, exception-to-status mapping, and multi-step workflows (enroll → invoice → pay → payroll, waitlist promotion, substitution, password reset) signed in as real users from two branches. |
+| Project | Tests | Database | What it exercises |
+|---|---|---|---|
+| `CEMS.Application.Tests` | 326 | SQLite in-memory | Every command/query handler family against a real `ApplicationDbContext`, with hand-written fakes for `ICurrentUserService`/`IIdentityService`. Includes the real MediatR pipeline (validation + audit logging), the real ASP.NET Identity/JWT code, and the real QuestPDF/ClosedXML generators. Analytics tests assert hand-computed numbers. |
+| `CEMS.Api.Tests` | 157 | SQLite in-memory | The whole HTTP stack through `WebApplicationFactory<Program>`: routing, JWT auth, model binding, exception-to-status mapping, multi-step workflows (enroll → invoice → pay → payroll, waitlist promotion, substitution, password reset) signed in as real users from two branches, and assertions on what is written to the logs. |
+| `CEMS.Postgres.Tests` | 42 | **PostgreSQL** | What SQLite can't show: every migration applied to an empty database (and the model checked for un-migrated changes), the exclusion/unique/check constraints, advisory locks, `timestamptz` and `numeric` behaviour, and **genuinely concurrent requests** — handlers and HTTP calls released at the same instant against a real server. |
 
-Two suites in `CEMS.Api.Tests` do most of the security work:
+Three suites do most of the security work:
 
-- **Authorization snapshot** (`authorization-surface.txt`) — a reflected list of every one of the 114 endpoints with its `[Authorize]` roles. Any endpoint added, removed, or re-permissioned makes the test fail until the diff is reviewed and the snapshot is regenerated with `UPDATE_AUTH_SNAPSHOT=1`. Nobody can widen access by accident.
-- **Role × endpoint matrix and branch-isolation tests** — a user at one branch is refused (or sees nothing) for another branch's students, guardians, sessions, invoices and payroll, over real HTTP.
+- **Authorization snapshot** (`authorization-surface.txt`) — a reflected list of every one of the 114 endpoints with its `[Authorize]` roles. Any endpoint added, removed, or re-permissioned fails the test until the diff is reviewed and the snapshot regenerated with `UPDATE_AUTH_SNAPSHOT=1`.
+- **Access sweep** — fires a request at every route that takes another resource's id (rooms, courses, enrollments, sessions, students, guardians, invoices, packages, exams, availability, payroll runs…) as a signed-in user who must not reach it — staff of another branch, and a teacher reaching for another teacher's course — and requires 403/404 for all of them. A new endpoint that forgets its scope check shows up here.
+- **Role × endpoint matrix and branch-isolation tests** — the same idea from the other direction, per role.
 
-Bugs the tests found (all fixed, each with a regression test):
+The concurrency tests are meant to be able to fail: with the advisory locks and the exclusion constraints both disabled, six of the ten scheduling-race tests fail; with only the locks disabled, the constraints alone still stop the double-booking and two of the tests fail (concurrent overrides, and overlapping partial slots).
 
-- `RecordPaymentCommandHandler` counted each new payment twice, so any single payment over half an invoice marked it fully paid.
-- Guardians were visible and editable across branches — any staff member could list, read, update and link guardians belonging to another branch's students. Access is now derived from the guardian's students' branches.
-- Deleting a student, room or teacher with history (enrollments, sessions, payroll) hit a foreign-key error and returned a 500; each now returns a 400 with an explanation.
-- Attendance could be marked on a cancelled session.
-- Admin password reset skipped the password policy (it removed the old password before validating the new one).
+### Running the tests
 
 ```bash
-dotnet test Backend/CEMS.sln
-```
-
-**Frontend** — Vitest + React Testing Library, 22 files. Tests run the real components, React Query hooks, axios client and interceptors; only the HTTP adapter is replaced by a small fake (`src/test/harness.tsx`) that **fails the test on any request it wasn't told about**, so a missing mock can't hide as an empty screen. They cover every feature module: sign-in, session expiry and role-based nav; students (registration, transfer, guardians); teachers; staff; branches and rooms; courses, curricula and enrollments; scheduling (including conflict and override flows); attendance; exams and grading; payments; payroll; analytics; the dashboards; and the assembled router.
-
-Writing them also fixed real UX defects: several forms swallowed server errors silently (they now show the reason), form labels weren't linked to their inputs, and analytics exports failed with no feedback.
-
-```bash
+dotnet test Backend/CEMS.sln                                       # everything (needs PostgreSQL, see below)
+dotnet test Backend/CEMS.sln --filter "FullyQualifiedName!~CEMS.Postgres.Tests"   # the fast, hermetic suites only
 cd Frontend && npm run test:coverage
 ```
+
+`CEMS.Postgres.Tests` needs a PostgreSQL server whose role may `CREATE DATABASE`. It creates a throwaway database per test class and drops it afterwards, and it **fails, rather than skips**, if no server is reachable — so a green run always means PostgreSQL was really exercised. It looks for the server in `CEMS_TEST_POSTGRES` (a normal Npgsql connection string), and otherwise reuses the API's own `dotnet user-secrets` connection (host and credentials only — the database name is replaced), so anyone who can run the app can run the tests. With Docker:
+
+```bash
+docker run -d --name cems-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:16
+export CEMS_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres"
+```
+
+### Bugs the tests found
+
+All fixed, each with a regression test:
+
+- `RecordPaymentCommandHandler` counted each new payment twice, so a payment over half an invoice marked it fully paid.
+- Guardians were readable and editable across branches; visibility is now derived from the guardian's students' branches.
+- Deleting a student, room or teacher with history hit a foreign-key error and returned a 500; each now returns a 400 with a reason.
+- Attendance could be marked on a cancelled session; admin password reset removed the old password before validating the new one against the policy.
+- **Concurrency:** two simultaneous bookings of one room or teacher both succeeded; two simultaneous first-time setups created two Owners; two payments racing on one invoice could overpay it or leave the wrong status; six students enrolling at once could overfill a one-seat course; two payroll runs for the same teacher and period could both be created; an amount edit could land on a payroll run that had just been approved.
+- **Atomicity:** creating a staff member wrote the account, its role and its branch assignment as separate commits, so a failure part-way left a login with no branch and a "email already taken" error on retry.
+- **Business rules that only the UI enforced:** a payment could exceed the invoice balance or be dated in the future; money with a third decimal place was validated, used in calculations, then silently rounded by the column; hourly payroll totals disagreed with the sum of their rounded line items; an overnight session slipped past the availability check; a substitution wiped an earlier override record; a waitlisted student could be promoted into a full course; a student could be transferred while still enrolled at the old branch; a package from another branch could be used to invoice a student.
 
 ## CI/CD
 
@@ -221,7 +233,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main` and on 
 | Backend | `dotnet restore` → `dotnet build` (Release, whole solution) → `dotnet test` (both test projects) |
 | Frontend | `npm ci` → `npm run lint` (oxlint) → `npm run test:coverage` (Vitest, fails below a 90% coverage floor) → `npm run build` (`tsc -b` + Vite) |
 
-The backend tests use SQLite in-memory, so the workflow needs no database service. There is no deployment step — the pipeline validates, it doesn't ship.
+The backend job starts a PostgreSQL 16 service container and points `CEMS_TEST_POSTGRES` at it, so the PostgreSQL-only tests (migrations, constraints, advisory locks, real concurrency) run on every push. There is no deployment step — the pipeline validates, it doesn't ship.
 
 ## Project Structure
 
@@ -234,8 +246,9 @@ CEMS/
 │   │   ├── CEMS.Infrastructure/  # EF Core, Identity, Postgres, QuestPDF, ClosedXML
 │   │   └── CEMS.Api/             # Controllers, JWT/CORS/Swagger setup, exception handling
 │   └── tests/
-│       ├── CEMS.Application.Tests/   # Handler, pipeline, Identity/JWT, report tests
-│       └── CEMS.Api.Tests/           # HTTP integration, authorization snapshot
+│       ├── CEMS.Application.Tests/   # Handler, pipeline, Identity/JWT, report tests (SQLite)
+│       ├── CEMS.Api.Tests/           # HTTP integration, authorization snapshot, access sweep (SQLite)
+│       └── CEMS.Postgres.Tests/      # Real PostgreSQL: migrations, constraints, locks, concurrency
 ├── .github/workflows/            # CI: backend build+test, frontend lint+test+build
 ├── Frontend/
 │   └── src/
@@ -261,7 +274,7 @@ CEMS/
 | Docs | Swagger / OpenAPI (Development only) |
 | PDF export | QuestPDF |
 | Excel export | ClosedXML |
-| Backend testing | xUnit, SQLite in-memory |
+| Backend testing | xUnit; SQLite in-memory for speed, PostgreSQL for what SQLite can't show |
 | Frontend | React 19, TypeScript |
 | Build tool | Vite |
 | Styling | Tailwind CSS v4 |
@@ -280,7 +293,7 @@ CEMS/
 
 ### Configuration
 
-Connection string and JWT signing key are read from configuration and never committed. `Program.cs` fails fast at startup if either is missing, or if the JWT key is under 32 characters. Set them locally with .NET's [Secret Manager](https://learn.microsoft.com/aspnet/core/security/app-secrets), from `Backend/src/CEMS.Api`:
+Connection string and JWT signing key are read from configuration and never committed. `Program.cs` fails fast at startup if the connection string is missing or the JWT settings are invalid (key under 32 bytes, missing issuer/audience, or an expiry outside 1 minute–24 hours). Set them locally with .NET's [Secret Manager](https://learn.microsoft.com/aspnet/core/security/app-secrets), from `Backend/src/CEMS.Api`:
 
 ```bash
 dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=cems;Username=postgres;Password=YOUR_PASSWORD"
@@ -294,6 +307,8 @@ Any other environment sets the same values as `ConnectionStrings__Default` / `Jw
 ```bash
 dotnet ef database update --project Backend/src/CEMS.Infrastructure --startup-project Backend/src/CEMS.Api
 ```
+
+The migrations create the `btree_gist` extension (trusted since PostgreSQL 13, so the database owner can create it) and add overlap/uniqueness constraints; on a database that already contains rows that violate them (two ordinary sessions overlapping in one room, overlapping payroll periods, duplicate live enrollments) the migration fails and those rows must be resolved first.
 
 There's no self-registration endpoint. The first account is created via `POST /api/auth/bootstrap-owner` (anonymous, but self-disables the instant any user exists):
 
@@ -332,7 +347,7 @@ Prints every seeded account's email at the end (all passwords: `DemoPass123`).
 - **Payroll's four `PayType`s are implemented as genuinely different code paths**, not one formula with a multiplier — because a hard-coded salary and a percentage of collected revenue don't have per-session line items, and forcing them through a shared session-loop would produce meaningless line items just to satisfy a common shape.
 - **Invoice status is computed on every payment, never set directly.** The alternative — letting a client pass a status — would let the stored state drift from the actual sum of payments; deriving it from `Payments` on every write means it can't.
 - **Domain has zero framework dependencies.** `ApplicationUser` (ASP.NET Identity) lives in `Infrastructure`; a domain entity that needs to reference a user stores a plain `Guid UserId` rather than a navigation property to `ApplicationUser`, keeping `Domain` compilable without any ASP.NET or EF Core reference.
-- **Tests run against a real EF Core context, not a mocked one.** `CEMS.Application.Tests` builds `ApplicationDbContext` on SQLite in-memory instead of mocking `IApplicationDbContext`, specifically because query-translation issues (a LINQ expression EF can't turn into SQL) only surface against a real provider — a mock would pass regardless.
+- **Tests run against a real EF Core context, not a mocked one — and where the provider matters, against PostgreSQL itself.** The fast suites build `ApplicationDbContext` on SQLite in-memory instead of mocking `IApplicationDbContext`, because a mock would pass regardless of whether a query translates. SQLite is not PostgreSQL, though (no exclusion constraints, no advisory locks, different `timestamptz` and `numeric` behaviour, single writer), so `CEMS.Postgres.Tests` covers those against a real server.
 
 ## Challenges / Interesting Problems
 
@@ -341,16 +356,40 @@ Prints every seeded account's email at the end (all passwords: `DemoPass123`).
 - **Payroll as a discriminated calculation.** Representing four compensation models cleanly meant accepting that two of them produce audit-trail line items and two don't, rather than forcing a common shape onto all four.
 - **Time representation.** Storing every `DateTime` as UTC via a global EF Core value converter, since Npgsql rejects `Kind=Unspecified` against `timestamptz` and a JSON-deserialized timestamp without a `Z` suffix comes back `Unspecified` by default — the converter means the API stays correct even when a client forgets the suffix.
 
+## Engineering Decisions / Trade-offs
+
+**Branch isolation is a convention, backed by tests — not a global filter.** Each handler that touches branch-owned data calls `EnsureAccessToBranch` (or `VisibleTo` for guardians, which have no branch of their own) as soon as it knows the record's branch. A global EF query filter would be harder to forget but cannot express "a teacher's branch comes from `TeacherBranch`, a manager's from `UserBranchAssignment`". The cost of a convention is that it can be forgotten, so it is enforced from outside: the endpoint snapshot fails on any change to who may call what, and the access sweep tries every id-taking route as someone who must not reach it.
+
+**Concurrency: advisory locks first, exclusion constraints behind them.** "Is the room free? then book it" is a race, and `SERIALIZABLE` would mean retry loops on every write path. Instead the handler opens a transaction and takes `pg_advisory_xact_lock` on the room and the teacher (in sorted order, so two requests can't deadlock), and only then checks — the second request waits, then sees the first one's session. Row locks can't do this because the conflicting row doesn't exist yet. Behind the locks, `EXCLUDE USING gist` constraints make the database itself refuse two ordinary sessions that overlap in a room or for a teacher, so a code path that forgets the lock still can't corrupt the timetable. Sessions a manager has knowingly overridden are exempt from the constraint (that's what an override is) and carry their reason on the row. The same lock mechanism serializes enrolling/promoting per course, payments and cancellation per invoice, payroll generation and approval, student transfers, and the one-time Owner bootstrap; unique indexes and payroll-period exclusion constraints are the backstop for those.
+
+**Transactions where the operation is genuinely atomic, not everywhere.** A single `SaveChangesAsync` is already atomic, so most handlers have no explicit transaction. Explicit ones exist only where more than one write or a lock is involved: session booking, enrollment, payments, payroll, transfers, and creating a staff member (Identity account + role + branch assignment share one `DbContext`, so one transaction covers all three). `IApplicationDbContext.AcquireLocksAsync` refuses to run outside a transaction, because an advisory lock taken in autocommit would release immediately and protect nothing.
+
+**Teacher qualification is structural, not overridable.** A conflict (double-booking, outside availability) is something a manager may knowingly accept; an unqualified teacher is not a scheduling collision but a staffing fact, like a teacher who isn't assigned to the branch. The trade-off is that an emergency cover needs the qualification added first (a one-click Manager/Owner action) rather than an override reason.
+
+**The JWT proves identity; the account decides access.** Tokens last up to 6 hours and there is no refresh flow, so on their own a deactivated account or a changed role would linger for hours. Rather than build a revocation list, every request re-reads the account (three small queries) and rejects it if it is gone or deactivated, and rebuilds the role and branch claims from the database. Five failed passwords lock an account for 15 minutes; a locked account answers exactly like a wrong password, at the cost that someone who knows an address can lock that account out.
+
+**Logging is narrow by construction.** Each successful command writes one audit line: who, which command, which records (the values of its `Guid` properties and nothing else, so passwords, emails and amounts cannot reach a log even by mistake), and a trace id. A failed request is logged once, at the HTTP layer, at a level that means something: `Warning` for 401/403 (with user and client address), `Information` for other client errors, `Error` with the exception for a 500. Failed logins log no email and no guess.
+
+**Money is validated to what the column can hold.** Amounts are `numeric(10,2)`; validators reject a third decimal place or an overflow up front (otherwise PostgreSQL would silently round a value the code had already used), payroll rounds each line half-away-from-zero so totals equal the sum of their lines, and check constraints repeat the basics (positive amounts, ordered periods) in the database.
+
+**Two databases in the tests, on purpose.** SQLite in-memory keeps 480+ tests to seconds and lets every test start from an empty database; PostgreSQL is used only for what SQLite cannot show, and those tests fail rather than skip when no server is available.
+
+**The Application layer talks to EF Core directly.** `IApplicationDbContext` exposes `DbSet`s and handlers query them; there is no repository layer on top. That is a deliberate simplification (a repository over EF would mostly rename `Where`), paid for by the Application project depending on EF Core, and it is why the tests run handlers against a real context rather than mocks.
+
+**Some behaviors that look like gaps are decisions.** Teachers are shared across branches, so a Branch Manager may attach any teacher to *their own* branch (they cannot touch another branch). The front desk is not sent teacher pay. A payment may not exceed the remaining balance (there is no customer-credit model), and may not be future-dated.
+
 ## Project Status
 
-Actively developed and demo-ready for local evaluation, with CI validating every push. Known limitations:
+Actively developed and demo-ready for local evaluation, with CI validating every push. It is a portfolio system, not a hardened production service; known limitations:
 
-- Session scheduling assumes a single timezone across all branches; `TeacherAvailability` and session times are compared as literal UTC day-of-week/time-of-day with no per-branch timezone handling
-- JWTs last 6 hours (`Jwt:ExpiryMinutes`) with no refresh token — a hard logout at expiry, not a silent renewal
+- Session scheduling assumes a single timezone across all branches; `TeacherAvailability` and session times are compared as literal UTC day-of-week/time-of-day with no per-branch timezone handling, and an availability window can't describe a session that crosses midnight (such a session is treated as outside availability)
+- JWTs last 6 hours (`Jwt:ExpiryMinutes`) with no refresh token — a hard logout at expiry, not a silent renewal — and the per-request account check adds a few database reads to every authenticated call (a cache or a shorter token plus refresh would be the next step at scale)
 - No email integration: password resets are admin-assisted rather than self-service, and there are no invoice-due reminders
 - Logging goes through the standard `ILogger` to the console only — there is no log sink, metrics, or tracing backend configured
-- A JWT stays valid until it expires even if the account is deactivated afterwards (no per-request check against the user store), and there is no login lockout after repeated failures
-- Line coverage is high, but the suites are still fakes at the edges: the backend tests use SQLite rather than PostgreSQL, so Postgres-specific behaviour isn't exercised in CI
+- Percentage-based teacher payroll pays each teacher of a course their percentage of that course's full collected revenue (co-teachers each get a share of the same money), and still counts payments on invoices that were later cancelled while partly paid, which the revenue analytics exclude
+- The Owner-only payroll handlers rely on the controller's `[Authorize(Roles = "Owner")]` (pinned by the endpoint snapshot) rather than re-checking the role inside the handler
+- A front-desk user can delete a student, but only one with no enrollments, attendance, grades or invoices (mistaken entries); anyone with history must be set to Paused or Graduated
+- Deactivating a user takes effect on their next request, but there is no "sign out everywhere" or per-device session list
 
 ## License
 
