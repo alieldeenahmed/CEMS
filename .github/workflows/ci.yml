@@ -100,11 +100,11 @@ jobs:
           set -euo pipefail
           token=$(curl -fsS -X POST "$API/api/auth/login" -H 'Content-Type: application/json'             -d '{"email":"owner@codecamp.demo","password":"DemoPass123"}' | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
           test -n "$token"
-          # Capture first, then grep: `curl | grep -q` makes curl fail with 23 when grep exits early under pipefail.
+          # Capture first and grep a here-string: any `... | grep -q` pipe breaks under pipefail when grep exits early.
           students=$(curl -fsS -H "Authorization: Bearer $token" "$API/api/students")
-          echo "$students" | grep -q "Khaled Hany"
+          grep -q "Khaled Hany" <<< "$students"
           swagger=$(curl -fsS "$API/swagger/v1/swagger.json")
-          echo "$swagger" | grep -q '"openapi"'
+          grep -q '"openapi"' <<< "$swagger"
           today=$(date -u +%F)
           curl -fsS -H "Authorization: Bearer $token"             "$API/api/analytics/dashboard/export/pdf?periodStart=${today}&periodEnd=${today}" -o dashboard.pdf
           head -c 4 dashboard.pdf | grep -q '%PDF'
