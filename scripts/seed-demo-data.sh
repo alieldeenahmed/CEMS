@@ -57,6 +57,7 @@ ISO='%Y-%m-%dT%H:%M:%SZ'
 TWO_HOURS_AGO="$(fmt_utc $(( NOW - 7200 )) "$ISO")"
 ONE_HOUR_AGO="$(fmt_utc $(( NOW - 3600 )) "$ISO")"
 IN_14_DAYS="$(fmt_utc $(( NOW + 14 * 86400 )) '%Y-%m-%d')"
+IN_30_DAYS="$(fmt_utc $(( NOW + 30 * 86400 )) '%Y-%m-%d')"
 SEVEN_DAYS_AGO="$(fmt_utc $(( NOW - 7 * 86400 )) '%Y-%m-%d')"
 
 echo "=== CEMS demo data seeder: CodeCamp (Alexandria) -> $BASE ==="
@@ -183,11 +184,15 @@ echo "  1 exam with 1 grade recorded"
 echo; echo "[11/12] Creating invoices and payments..."
 INV_PAID="$(create "/api/students/$S_KHALED/invoices" "{\"packageId\":\"$PY_PACKAGE\",\"amount\":null,\"dueDate\":\"$IN_14_DAYS\"}")"
 api POST "/api/invoices/$INV_PAID/payments" "$TOKEN" "{\"amountPaid\":2400,\"paymentDate\":\"$TODAY\",\"method\":\"Card\"}" >/dev/null
+# Khaled gets one invoice in each common state, so a single student's page shows them side by side.
+INV_KHALED_PARTIAL="$(create "/api/students/$S_KHALED/invoices" "{\"packageId\":null,\"amount\":500,\"dueDate\":\"$IN_14_DAYS\"}")"
+api POST "/api/invoices/$INV_KHALED_PARTIAL/payments" "$TOKEN" "{\"amountPaid\":200,\"paymentDate\":\"$TODAY\",\"method\":\"Cash\"}" >/dev/null
+create "/api/students/$S_KHALED/invoices" "{\"packageId\":null,\"amount\":350,\"dueDate\":\"$IN_30_DAYS\"}" >/dev/null
 INV_PARTIAL="$(create "/api/students/$S_LINA/invoices" "{\"packageId\":\"$JS_PACKAGE\",\"amount\":null,\"dueDate\":\"$IN_14_DAYS\"}")"
 api POST "/api/invoices/$INV_PARTIAL/payments" "$TOKEN" "{\"amountPaid\":1200,\"paymentDate\":\"$TODAY\",\"method\":\"Cash\"}" >/dev/null
 # Unpaid and overdue ad-hoc registration fee: demonstrates the outstanding-balance / overdue view.
 create "/api/students/$S_MALAK/invoices" "{\"packageId\":null,\"amount\":200,\"dueDate\":\"$SEVEN_DAYS_AGO\"}" >/dev/null
-echo "  3 invoices: 1 fully paid, 1 partially paid, 1 unpaid + overdue"
+echo "  5 invoices: 1 fully paid, 2 partially paid, 1 pending, 1 unpaid + overdue"
 
 # ---- 12. Payroll -------------------------------------------------------------------------------
 echo; echo "[12/12] Generating a payroll run..."

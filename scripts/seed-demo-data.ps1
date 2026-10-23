@@ -223,6 +223,11 @@ Write-Host "`n[11/12] Creating invoices and payments..." -ForegroundColor Yellow
 $invoicePaid = Invoke-Api POST "/api/students/$($studentKhaled.id)/invoices" $ownerToken @{ packageId = $pythonPackageSmouha.id; amount = $null; dueDate = (Get-Date).AddDays(14).ToString("yyyy-MM-dd") }
 Invoke-Api POST "/api/invoices/$($invoicePaid.id)/payments" $ownerToken @{ amountPaid = 2400; paymentDate = (Get-Date).ToString("yyyy-MM-dd"); method = "Card" } | Out-Null
 
+# Khaled gets one invoice in each common state, so a single student's page shows them side by side.
+$invoiceKhaledPartial = Invoke-Api POST "/api/students/$($studentKhaled.id)/invoices" $ownerToken @{ packageId = $null; amount = 500; dueDate = (Get-Date).AddDays(14).ToString("yyyy-MM-dd") }
+Invoke-Api POST "/api/invoices/$($invoiceKhaledPartial.id)/payments" $ownerToken @{ amountPaid = 200; paymentDate = (Get-Date).ToString("yyyy-MM-dd"); method = "Cash" } | Out-Null
+Invoke-Api POST "/api/students/$($studentKhaled.id)/invoices" $ownerToken @{ packageId = $null; amount = 350; dueDate = (Get-Date).AddDays(30).ToString("yyyy-MM-dd") } | Out-Null
+
 # Partially paid, package-based.
 $invoicePartial = Invoke-Api POST "/api/students/$($studentLina.id)/invoices" $ownerToken @{ packageId = $webDevPackageSmouha.id; amount = $null; dueDate = (Get-Date).AddDays(14).ToString("yyyy-MM-dd") }
 Invoke-Api POST "/api/invoices/$($invoicePartial.id)/payments" $ownerToken @{ amountPaid = 1200; paymentDate = (Get-Date).ToString("yyyy-MM-dd"); method = "Cash" } | Out-Null
@@ -230,7 +235,7 @@ Invoke-Api POST "/api/invoices/$($invoicePartial.id)/payments" $ownerToken @{ am
 # Unpaid and overdue, ad-hoc registration fee -- demonstrates the outstanding-balance / overdue view.
 Invoke-Api POST "/api/students/$($studentMalak.id)/invoices" $ownerToken @{ packageId = $null; amount = 200; dueDate = (Get-Date).AddDays(-7).ToString("yyyy-MM-dd") } | Out-Null
 
-Write-Host "  3 invoices: 1 fully paid, 1 partially paid, 1 unpaid + overdue"
+Write-Host "  5 invoices: 1 fully paid, 2 partially paid, 1 pending, 1 unpaid + overdue"
 
 # --- 12. Payroll -------------------------------------------------------------------------------------
 Write-Host "`n[12/12] Generating a payroll run..." -ForegroundColor Yellow
