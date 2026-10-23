@@ -44,9 +44,11 @@ That project needs a PostgreSQL server whose role may `CREATE DATABASE`, and it 
 dotnet test Backend/CEMS.sln --filter "FullyQualifiedName!~CEMS.Postgres.Tests"
 ```
 
-## The browser can't reach `https://localhost:7099` (certificate warning)
+## The frontend can't reach the API / a certificate warning appears
 
-The frontend's default API URL (`Frontend/.env.example`) is the HTTPS dev endpoint. If your browser rejects the development certificate, trust it with `dotnet dev-certs https --trust`, or point the frontend at the plain-HTTP endpoint by setting `VITE_API_URL=http://localhost:5272/api`. If the API runs in Docker Compose it only listens on HTTP, so use `http://localhost:5272/api`.
+The frontend talks to `http://localhost:5272/api` by default (`Frontend/src/shared/api/client.ts`, `Frontend/.env.example`), which is where plain `dotnet run --project Backend/src/CEMS.Api` and the Docker Compose `app` profile both listen. To use the HTTPS profile instead (`dotnet run --launch-profile https`, `https://localhost:7099`), set `VITE_API_URL=https://localhost:7099/api` in `Frontend/.env.local`, and trust the development certificate once with `dotnet dev-certs https --trust` so the browser accepts it.
+
+If the browser reports a CORS error, the page's origin is not in `Cors:AllowedOrigins` (default `http://localhost:5173`). Add it with the `Cors__AllowedOrigins__0` environment variable (`CORS_ALLOWED_ORIGIN` for Docker Compose).
 
 ## Windows: `dotnet ef` is blocked by Smart App Control / an "Application Control policy" error
 
