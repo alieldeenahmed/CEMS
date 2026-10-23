@@ -20,11 +20,11 @@
       - PostgreSQL must be reachable at the path/credentials in ConnectionStrings__Default
 
 .PARAMETER ApiBaseUrl
-    Base URL of the running API. Defaults to http://localhost:5080.
+    Base URL of the running API. Defaults to http://localhost:5272 (the `dotnet run` http profile).
 #>
 
 param(
-    [string]$ApiBaseUrl = "http://localhost:5080"
+    [string]$ApiBaseUrl = "http://localhost:5272"
 )
 
 $ErrorActionPreference = "Stop"
