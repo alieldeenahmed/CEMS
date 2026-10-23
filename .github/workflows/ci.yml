@@ -35,6 +35,13 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Backend/**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       - name: Restore
         run: dotnet restore Backend/CEMS.sln
 
@@ -70,3 +77,39 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # Proves the README's one-command path actually works from a clean checkout: build the API image, start
+  # PostgreSQL + the API (migrations applied by Database__MigrateOnStartup), seed it with the bash seeder,
+  # then exercise a few real endpoints (sign in, a data read, the Swagger document, a QuestPDF export).
+  smoke:
+    name: Docker Compose smoke test (API + PostgreSQL + seed)
+    runs-on: ubuntu-latest
+    env:
+      API: http://localhost:5272
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the stack
+        run: docker compose --profile app up -d --build --wait --wait-timeout 240
+
+      - name: Seed demo data
+        run: ./scripts/seed-demo-data.sh
+
+      - name: Exercise the API
+        run: |
+          set -euo pipefail
+          token=$(curl -fsS -X POST "$API/api/auth/login" -H 'Content-Type: application/json'             -d '{"email":"owner@codecamp.demo","password":"DemoPass123"}' | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+          test -n "$token"
+          curl -fsS -H "Authorization: Bearer $token" "$API/api/students" | grep -q "Khaled Hany"
+          curl -fsS "$API/swagger/v1/swagger.json" | grep -q '"openapi"'
+          today=$(date -u +%F)
+          curl -fsS -H "Authorization: Bearer $token"             "$API/api/analytics/dashboard/export/pdf?periodStart=${today}&periodEnd=${today}" -o dashboard.pdf
+          head -c 4 dashboard.pdf | grep -q '%PDF'
+
+      - name: Container logs (on failure)
+        if: failure()
+        run: docker compose --profile app logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose --profile app down -v
