@@ -7,6 +7,8 @@ using CEMS.Application;
 using CEMS.Application.Common.Interfaces;
 using CEMS.Infrastructure;
 using CEMS.Infrastructure.Auth;
+using CEMS.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -145,6 +147,15 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+// Opt-in: apply pending EF Core migrations at startup. Off by default so a normal run never alters the
+// schema on its own; the Docker Compose demo turns it on (Database__MigrateOnStartup=true) so that
+// `docker compose up` is the only command a newcomer needs. Real deployments should migrate as an explicit step.
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    using var migrationScope = app.Services.CreateScope();
+    migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
