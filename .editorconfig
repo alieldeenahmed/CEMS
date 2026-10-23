@@ -1,0 +1,25 @@
+# EditorConfig: https://editorconfig.org
+# Whitespace conventions matching the existing code; it deliberately does not set line endings
+# (git normalises them) or enforce any code style that would reformat existing files.
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csproj,sln,props,targets}]
+indent_size = 4
+
+[*.{ts,tsx,js,jsx,json,css,html,yml,yaml}]
+indent_size = 2
+
+[*.{sh,ps1}]
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
